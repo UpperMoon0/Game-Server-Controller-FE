@@ -29,3 +29,16 @@ yarn-error.log*
 
 # Tauri
 src-tauri/target/
+  
+# TypeScript build cache  
+*.tsbuildinfo  
+  
+# ESLint cache  
+.eslintcache  
+  
+# Cache directories  
+.cache/  
+  
+# Sensitive files  
+*.pem  
+*.key 
