@@ -22,7 +22,6 @@ fn get_version() -> String {
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             close_splashscreen,
             get_platform,

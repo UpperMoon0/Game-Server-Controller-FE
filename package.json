@@ -1,6 +1,7 @@
 {
   "name": "game-server-controller-ui",
   "version": "1.0.0",
+  "type": "module",
   "description": "Game Server Controller Desktop UI",
   "scripts": {
     "dev": "vite",
