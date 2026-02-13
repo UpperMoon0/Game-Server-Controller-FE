@@ -1,11 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::Manager;
+
 #[tauri::command]
 async fn close_splashscreen(window: tauri::Window) {
-    if let Some(splashscreen) = window.get_webview_window("splashscreen") {
+    if let Some(splashscreen) = window.get_window("splashscreen") {
         splashscreen.close().unwrap();
     }
-    if let Some(main) = window.get_webview_window("main") {
+    if let Some(main) = window.get_window("main") {
         main.show().unwrap();
     }
 }
@@ -30,3 +32,5 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+
