@@ -38,6 +38,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Fetch Secrets from Key Vault
+        id: kv
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            TAURI_PRIVATE_KEY=$(az keyvault secret show --vault-name nstutcommonkv --name tauri-private-key --query value -o tsv)
+            TAURI_KEY_PASSWORD=$(az keyvault secret show --vault-name nstutcommonkv --name tauri-key-password --query value -o tsv)
+            GH_PAT=$(az keyvault secret show --vault-name nstutcommonkv --name github-pat --query value -o tsv)
+            
+            echo "::add-mask::$TAURI_PRIVATE_KEY"
+            echo "::add-mask::$TAURI_KEY_PASSWORD"
+            echo "::add-mask::$GH_PAT"
+            
+            echo "TAURI_PRIVATE_KEY=$TAURI_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "TAURI_KEY_PASSWORD=$TAURI_KEY_PASSWORD" >> $GITHUB_OUTPUT
+            echo "GH_PAT=$GH_PAT" >> $GITHUB_OUTPUT
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -65,9 +87,9 @@ jobs:
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ steps.kv.outputs.GH_PAT }}
+          TAURI_PRIVATE_KEY: ${{ steps.kv.outputs.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ steps.kv.outputs.TAURI_KEY_PASSWORD }}
         with:
           tagName: v${{ needs.get-version.outputs.version }}
           releaseName: 'Game Server Controller v__VERSION__'
@@ -83,6 +105,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Fetch GH PAT from Key Vault
+        id: kv
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            GH_PAT=$(az keyvault secret show --vault-name nstutcommonkv --name github-pat --query value -o tsv)
+            echo "::add-mask::$GH_PAT"
+            echo "GH_PAT=$GH_PAT" >> $GITHUB_OUTPUT
+
       - name: Update tauri.conf.json version
         run: |
           VERSION=${{ needs.get-version.outputs.version }}
@@ -95,4 +131,4 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add src-tauri/tauri.conf.json
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: update tauri.conf.json version to ${{ needs.get-version.outputs.version }}"
-          git push
+          git push https://x-access-token:${{ steps.kv.outputs.GH_PAT }}@github.com/${{ github.repository }}.git HEAD:main
