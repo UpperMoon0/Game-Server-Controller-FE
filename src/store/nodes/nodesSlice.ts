@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-import type { Node, NodeMetrics } from '../../types/api'
+import type { Node, NodeMetrics, CreateNodeRequest } from '../../types/api'
 import { nodesApi } from '../../services/api'
 
 interface NodesState {
@@ -14,9 +14,9 @@ interface NodesState {
   fetchNodes: () => Promise<void>
   fetchNodeMetrics: (nodeId: string) => Promise<void>
   selectNode: (nodeId: string | null) => void
-  addNode: (node: Node) => void
-  updateNode: (node: Node) => void
-  removeNode: (nodeId: string) => void
+  createNode: (data: CreateNodeRequest) => Promise<Node | null>
+  updateNodeData: (id: string, data: Partial<Node>) => Promise<Node | null>
+  deleteNode: (nodeId: string) => Promise<boolean>
   clearError: () => void
 }
 
@@ -58,23 +58,59 @@ export const useNodesStore = create<NodesState>()(
           set({ selectedNodeId: nodeId })
         },
 
-        addNode: (node: Node) => {
-          set((state) => ({
-            nodes: [...state.nodes, node]
-          }))
+        createNode: async (data: CreateNodeRequest) => {
+          set({ loading: true, error: null })
+          try {
+            const node = await nodesApi.create(data)
+            set((state) => ({
+              nodes: [...state.nodes, node],
+              loading: false
+            }))
+            return node
+          } catch (error) {
+            set({ 
+              loading: false, 
+              error: error instanceof Error ? error.message : 'Failed to create node' 
+            })
+            return null
+          }
         },
 
-        updateNode: (node: Node) => {
-          set((state) => ({
-            nodes: state.nodes.map((n) => (n.id === node.id ? node : n))
-          }))
+        updateNodeData: async (id: string, data: Partial<Node>) => {
+          set({ loading: true, error: null })
+          try {
+            const node = await nodesApi.update(id, data)
+            set((state) => ({
+              nodes: state.nodes.map((n) => (n.id === id ? node : n)),
+              loading: false
+            }))
+            return node
+          } catch (error) {
+            set({ 
+              loading: false, 
+              error: error instanceof Error ? error.message : 'Failed to update node' 
+            })
+            return null
+          }
         },
 
-        removeNode: (nodeId: string) => {
-          set((state) => ({
-            nodes: state.nodes.filter((n) => n.id !== nodeId),
-            selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId
-          }))
+        deleteNode: async (nodeId: string) => {
+          set({ loading: true, error: null })
+          try {
+            await nodesApi.delete(nodeId)
+            set((state) => ({
+              nodes: state.nodes.filter((n) => n.id !== nodeId),
+              selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+              loading: false
+            }))
+            return true
+          } catch (error) {
+            set({ 
+              loading: false, 
+              error: error instanceof Error ? error.message : 'Failed to delete node' 
+            })
+            return false
+          }
         },
 
         clearError: () => {

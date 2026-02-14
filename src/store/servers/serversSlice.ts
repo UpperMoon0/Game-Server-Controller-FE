@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-import type { Server, ServerMetrics } from '../../types/api'
+import type { Server, ServerMetrics, CreateServerRequest, CreateServerResponse } from '../../types/api'
 import { serversApi } from '../../services/api'
 
 interface ServersState {
@@ -16,9 +16,10 @@ interface ServersState {
   fetchServerMetrics: (serverId: string) => Promise<void>
   fetchServerLogs: (serverId: string, tail?: number) => Promise<void>
   selectServer: (serverId: string | null) => void
-  addServer: (server: Server) => void
-  updateServer: (server: Server) => void
-  removeServer: (serverId: string) => void
+  createServer: (data: CreateServerRequest) => Promise<CreateServerResponse | null>
+  updateServerData: (id: string, data: Partial<Server>) => Promise<Server | null>
+  deleteServer: (serverId: string, backup?: boolean) => Promise<boolean>
+  serverAction: (serverId: string, action: string) => Promise<boolean>
   clearError: () => void
 }
 
@@ -72,23 +73,75 @@ export const useServersStore = create<ServersState>()(
           set({ selectedServerId: serverId })
         },
 
-        addServer: (server: Server) => {
-          set((state) => ({
-            servers: [...state.servers, server]
-          }))
+        createServer: async (data: CreateServerRequest) => {
+          set({ loading: true, error: null })
+          try {
+            const response = await serversApi.create(data)
+            // Refresh the server list after creation
+            const servers = await serversApi.getAll()
+            set({ servers, loading: false })
+            return response
+          } catch (error) {
+            set({ 
+              loading: false, 
+              error: error instanceof Error ? error.message : 'Failed to create server' 
+            })
+            return null
+          }
         },
 
-        updateServer: (server: Server) => {
-          set((state) => ({
-            servers: state.servers.map((s) => (s.id === server.id ? server : s))
-          }))
+        updateServerData: async (id: string, data: Partial<Server>) => {
+          set({ loading: true, error: null })
+          try {
+            const server = await serversApi.update(id, data)
+            set((state) => ({
+              servers: state.servers.map((s) => (s.id === id ? server : s)),
+              loading: false
+            }))
+            return server
+          } catch (error) {
+            set({ 
+              loading: false, 
+              error: error instanceof Error ? error.message : 'Failed to update server' 
+            })
+            return null
+          }
         },
 
-        removeServer: (serverId: string) => {
-          set((state) => ({
-            servers: state.servers.filter((s) => s.id !== serverId),
-            selectedServerId: state.selectedServerId === serverId ? null : state.selectedServerId
-          }))
+        deleteServer: async (serverId: string, backup?: boolean) => {
+          set({ loading: true, error: null })
+          try {
+            await serversApi.delete(serverId, backup)
+            set((state) => ({
+              servers: state.servers.filter((s) => s.id !== serverId),
+              selectedServerId: state.selectedServerId === serverId ? null : state.selectedServerId,
+              loading: false
+            }))
+            return true
+          } catch (error) {
+            set({ 
+              loading: false, 
+              error: error instanceof Error ? error.message : 'Failed to delete server' 
+            })
+            return false
+          }
+        },
+
+        serverAction: async (serverId: string, action: string) => {
+          set({ loading: true, error: null })
+          try {
+            await serversApi.action(serverId, action)
+            // Refresh the server list after action
+            const servers = await serversApi.getAll()
+            set({ servers, loading: false })
+            return true
+          } catch (error) {
+            set({ 
+              loading: false, 
+              error: error instanceof Error ? error.message : `Failed to ${action} server` 
+            })
+            return false
+          }
         },
 
         clearError: () => {

@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
-import type { Node } from '../../types/api'
+import type { Node, CreateNodeRequest } from '../../types/api'
+import { NodeModal } from './NodeModal'
 
 export const NodeList: React.FC = () => {
-  const { nodes, loading, error, fetchNodes, removeNode } = useNodesStore()
+  const { nodes, loading, error, fetchNodes, createNode, updateNodeData, deleteNode } = useNodesStore()
   const [filter, setFilter] = useState<string>('all')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingNode, setEditingNode] = useState<Node | null>(null)
+  const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchNodes()
@@ -14,7 +18,40 @@ export const NodeList: React.FC = () => {
     ? nodes 
     : nodes.filter(n => n.status === filter)
 
-  if (loading) {
+  const handleAddNode = () => {
+    setEditingNode(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEditNode = (node: Node) => {
+    setEditingNode(node)
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteNode = async (nodeId: string) => {
+    setDeletingNodeId(nodeId)
+    const success = await deleteNode(nodeId)
+    if (success) {
+      setDeletingNodeId(null)
+    }
+  }
+
+  const handleModalSubmit = async (data: CreateNodeRequest) => {
+    if (editingNode) {
+      await updateNodeData(editingNode.id, data)
+    } else {
+      await createNode(data)
+    }
+    setIsModalOpen(false)
+    setEditingNode(null)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setEditingNode(null)
+  }
+
+  if (loading && nodes.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="spinner" />
@@ -54,7 +91,10 @@ export const NodeList: React.FC = () => {
             <option value="offline">Offline</option>
             <option value="maintenance">Maintenance</option>
           </select>
-          <button className="btn btn-primary flex items-center gap-2">
+          <button 
+            onClick={handleAddNode}
+            className="btn btn-primary flex items-center gap-2"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -66,7 +106,13 @@ export const NodeList: React.FC = () => {
       {/* Nodes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredNodes.map(node => (
-          <NodeCard key={node.id} node={node} onDelete={() => removeNode(node.id)} />
+          <NodeCard 
+            key={node.id} 
+            node={node} 
+            onEdit={() => handleEditNode(node)}
+            onDelete={() => handleDeleteNode(node.id)}
+            isDeleting={deletingNodeId === node.id}
+          />
         ))}
       </div>
 
@@ -79,16 +125,27 @@ export const NodeList: React.FC = () => {
           <p className="text-gray-500 text-sm mt-1">Add a new node to get started</p>
         </div>
       )}
+
+      {/* Node Modal */}
+      <NodeModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleModalSubmit}
+        editingNode={editingNode}
+        loading={loading}
+      />
     </div>
   )
 }
 
 interface NodeCardProps {
   node: Node
+  onEdit: () => void
   onDelete: () => void
+  isDeleting: boolean
 }
 
-const NodeCard: React.FC<NodeCardProps> = ({ node, onDelete }) => {
+const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting }) => {
   const statusConfig = {
     online: {
       bg: 'bg-dark-600',
@@ -209,19 +266,27 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onDelete }) => {
 
       {/* Actions */}
       <div className="flex gap-2 pt-4 border-t border-dark-400">
-        <button className="btn btn-primary flex-1 text-sm py-2">
-          Details
+        <button 
+          onClick={onEdit}
+          className="btn btn-primary flex-1 text-sm py-2"
+        >
+          Edit
         </button>
         <button className="btn btn-secondary flex-1 text-sm py-2">
           Actions
         </button>
         <button 
           onClick={onDelete}
-          className="btn btn-danger py-2 px-3 text-sm"
+          disabled={isDeleting}
+          className="btn btn-danger py-2 px-3 text-sm disabled:opacity-50"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
+          {isDeleting ? (
+            <div className="spinner w-4 h-4" />
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          )}
         </button>
       </div>
     </div>
