@@ -11,12 +11,27 @@ import type {
   CreateNodeRequest 
 } from '../types/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+// Default URL, will be overridden by settings
+const DEFAULT_API_URL = 'http://localhost:8080'
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-})
+// Create axios instance with dynamic base URL
+const createApi = (baseUrl: string = DEFAULT_API_URL) => {
+  return axios.create({
+    baseURL: baseUrl,
+    timeout: 30000,
+  })
+}
+
+// Default API instance
+let api = createApi()
+
+// Function to update the base URL
+export const setApiBaseUrl = (url: string) => {
+  api = createApi(url)
+}
+
+// Function to get current API instance
+export const getApi = () => api
 
 // Nodes API
 export const nodesApi = {

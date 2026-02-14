@@ -1,16 +1,39 @@
-import React, { useState } from 'react'
+import React, { useEffect } from 'react'
+import { useSettingsStore } from '../../store/settings/settingsStore'
+import { setApiBaseUrl } from '../../services/api'
 
 export const Settings: React.FC = () => {
-  const [apiUrl, setApiUrl] = useState('http://localhost:8080')
-  const [refreshInterval, setRefreshInterval] = useState(30)
-  const [notifications, setNotifications] = useState(true)
-  const [darkMode, setDarkMode] = useState(true)
-  const [saved, setSaved] = useState(false)
+  const { 
+    settings, 
+    loading, 
+    error, 
+    saved, 
+    fetchSettings, 
+    saveSettings, 
+    updateSetting, 
+    resetSettings,
+    clearSaved 
+  } = useSettingsStore()
+
+  useEffect(() => {
+    fetchSettings()
+  }, [fetchSettings])
+
+  useEffect(() => {
+    if (saved) {
+      const timer = setTimeout(() => clearSaved(), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [saved, clearSaved])
 
   const handleSave = () => {
-    // TODO: Save settings
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    saveSettings(settings)
+    // Update API base URL immediately after save
+    setApiBaseUrl(settings.api_url)
+  }
+
+  const handleReset = () => {
+    resetSettings()
   }
 
   return (
@@ -20,6 +43,13 @@ export const Settings: React.FC = () => {
         <h1 className="text-3xl font-bold text-white">Settings</h1>
         <p className="text-gray-400 mt-1">Configure your application preferences</p>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="card max-w-2xl border-neon-red/30 bg-neon-red/10">
+          <p className="text-neon-red">{error}</p>
+        </div>
+      )}
 
       {/* General Settings */}
       <div className="card max-w-2xl">
@@ -42,8 +72,8 @@ export const Settings: React.FC = () => {
               </div>
               <input
                 type="text"
-                value={apiUrl}
-                onChange={(e) => setApiUrl(e.target.value)}
+                value={settings.api_url}
+                onChange={(e) => updateSetting('api_url', e.target.value)}
                 className="input w-full pl-10"
                 placeholder="http://localhost:8080"
               />
@@ -64,8 +94,8 @@ export const Settings: React.FC = () => {
               </div>
               <input
                 type="number"
-                value={refreshInterval}
-                onChange={(e) => setRefreshInterval(parseInt(e.target.value))}
+                value={settings.refresh_interval}
+                onChange={(e) => updateSetting('refresh_interval', parseInt(e.target.value) || 30)}
                 className="input w-full pl-10"
                 min="5"
                 max="300"
@@ -91,14 +121,14 @@ export const Settings: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => setNotifications(!notifications)}
+              onClick={() => updateSetting('notifications', !settings.notifications)}
               className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${
-                notifications ? 'bg-neon-cyan/30' : 'bg-dark-400'
+                settings.notifications ? 'bg-neon-cyan/30' : 'bg-dark-400'
               }`}
             >
               <div
                 className={`absolute top-1 w-5 h-5 rounded-full transition-all duration-300 ${
-                  notifications 
+                  settings.notifications 
                     ? 'left-8 bg-neon-cyan shadow-neon-cyan' 
                     : 'left-1 bg-gray-400'
                 }`}
@@ -120,14 +150,14 @@ export const Settings: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => updateSetting('dark_mode', !settings.dark_mode)}
               className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${
-                darkMode ? 'bg-neon-pink/30' : 'bg-dark-400'
+                settings.dark_mode ? 'bg-neon-pink/30' : 'bg-dark-400'
               }`}
             >
               <div
                 className={`absolute top-1 w-5 h-5 rounded-full transition-all duration-300 ${
-                  darkMode 
+                  settings.dark_mode 
                     ? 'left-8 bg-neon-pink shadow-neon-pink' 
                     : 'left-1 bg-gray-400'
                 }`}
@@ -140,11 +170,19 @@ export const Settings: React.FC = () => {
         <div className="mt-8 pt-6 border-t border-dark-400 flex items-center gap-4">
           <button
             onClick={handleSave}
-            className="btn btn-primary flex items-center gap-2"
+            disabled={loading}
+            className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+            {loading ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
             Save Settings
           </button>
           
@@ -206,7 +244,11 @@ export const Settings: React.FC = () => {
             <p className="text-white font-medium">Reset all settings</p>
             <p className="text-sm text-gray-500">This will reset all settings to their default values</p>
           </div>
-          <button className="btn btn-danger">
+          <button 
+            onClick={handleReset}
+            disabled={loading}
+            className="btn btn-danger disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Reset
           </button>
         </div>
