@@ -127,7 +127,7 @@ export interface CreateNodeRequest {
   hostname: string
   ip_address: string
   port: number
-  game_types: string[]
+  game_type: string
   total_cpu_cores: number
   total_memory_mb: number
   total_storage_mb: number

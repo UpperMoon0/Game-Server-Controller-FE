@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import type { Node, CreateNodeRequest } from '../../types/api'
+import { gameTypesApi, GameType } from '../../services/api'
 
 interface NodeModalProps {
   isOpen: boolean
@@ -14,23 +15,12 @@ const defaultFormData: CreateNodeRequest = {
   hostname: '',
   ip_address: '',
   port: 50051,
-  game_types: [],
+  game_type: '',
   total_cpu_cores: 4,
   total_memory_mb: 8192,
   total_storage_mb: 102400,
   os_version: ''
 }
-
-const availableGameTypes = [
-  'minecraft',
-  'rust',
-  'csgo',
-  'ark',
-  'valheim',
-  'terraria',
-  'seven_days',
-  'unturned'
-]
 
 export const NodeModal: React.FC<NodeModalProps> = ({
   isOpen,
@@ -40,7 +30,32 @@ export const NodeModal: React.FC<NodeModalProps> = ({
   loading = false
 }) => {
   const [formData, setFormData] = useState<CreateNodeRequest>(defaultFormData)
-  const [gameTypesInput, setGameTypesInput] = useState<string>('')
+  const [gameTypes, setGameTypes] = useState<GameType[]>([])
+  const [loadingGameTypes, setLoadingGameTypes] = useState(false)
+
+  // Fetch game types from backend
+  useEffect(() => {
+    const fetchGameTypes = async () => {
+      setLoadingGameTypes(true)
+      try {
+        const types = await gameTypesApi.getAll()
+        setGameTypes(types)
+        // Set default game type if available
+        if (types.length > 0 && !formData.game_type) {
+          setFormData(prev => ({ ...prev, game_type: types[0].id }))
+        }
+      } catch (error) {
+        console.error('Failed to fetch game types:', error)
+        setGameTypes([])
+      } finally {
+        setLoadingGameTypes(false)
+      }
+    }
+    
+    if (isOpen) {
+      fetchGameTypes()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (editingNode) {
@@ -49,20 +64,22 @@ export const NodeModal: React.FC<NodeModalProps> = ({
         hostname: editingNode.hostname,
         ip_address: editingNode.ip_address,
         port: editingNode.port,
-        game_types: editingNode.game_types,
+        game_type: editingNode.game_types[0] || '',
         total_cpu_cores: editingNode.total_cpu_cores,
         total_memory_mb: editingNode.total_memory_mb,
         total_storage_mb: editingNode.total_storage_mb,
         os_version: editingNode.os_version || ''
       })
-      setGameTypesInput(editingNode.game_types.join(', '))
     } else {
-      setFormData(defaultFormData)
-      setGameTypesInput('')
+      // Reset to default but preserve game_type if it was already set
+      setFormData(prev => ({
+        ...defaultFormData,
+        game_type: prev.game_type || ''
+      }))
     }
   }, [editingNode, isOpen])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -70,26 +87,6 @@ export const NodeModal: React.FC<NodeModalProps> = ({
         ? parseInt(value) || 0
         : value
     }))
-  }
-
-  const handleGameTypesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setGameTypesInput(value)
-    const types = value.split(',').map(t => t.trim()).filter(t => t.length > 0)
-    setFormData(prev => ({
-      ...prev,
-      game_types: types
-    }))
-  }
-
-  const toggleGameType = (gameType: string) => {
-    setFormData(prev => {
-      const gameTypes = prev.game_types.includes(gameType)
-        ? prev.game_types.filter(t => t !== gameType)
-        : [...prev.game_types, gameType]
-      setGameTypesInput(gameTypes.join(', '))
-      return { ...prev, game_types: gameTypes }
-    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,34 +188,36 @@ export const NodeModal: React.FC<NodeModalProps> = ({
             </div>
           </div>
 
-          {/* Game Types */}
+          {/* Game Type Dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              Game Types *
+              Game Type *
             </label>
-            <input
-              type="text"
-              value={gameTypesInput}
-              onChange={handleGameTypesChange}
-              className="input w-full"
-              placeholder="e.g., minecraft, rust, csgo"
-            />
-            <div className="flex flex-wrap gap-2 mt-2">
-              {availableGameTypes.map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => toggleGameType(type)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    formData.game_types.includes(type)
-                      ? 'bg-neon-cyan text-dark-900'
-                      : 'bg-dark-500 text-gray-300 hover:bg-dark-400'
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
+            <select
+              name="game_type"
+              value={formData.game_type}
+              onChange={handleChange}
+              required
+              disabled={loadingGameTypes || gameTypes.length === 0}
+              className="select w-full"
+            >
+              {loadingGameTypes ? (
+                <option value="">Loading...</option>
+              ) : gameTypes.length === 0 ? (
+                <option value="">No game types available</option>
+              ) : (
+                gameTypes.map(type => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))
+              )}
+            </select>
+            {gameTypes.find(t => t.id === formData.game_type)?.description && (
+              <p className="text-gray-500 text-xs mt-1">
+                {gameTypes.find(t => t.id === formData.game_type)?.description}
+              </p>
+            )}
           </div>
 
           {/* Resources */}
@@ -292,7 +291,7 @@ export const NodeModal: React.FC<NodeModalProps> = ({
             <button
               type="submit"
               className="btn btn-primary flex-1"
-              disabled={loading || formData.game_types.length === 0}
+              disabled={loading || !formData.game_type}
             >
               {loading ? (
                 <span className="flex items-center gap-2">
