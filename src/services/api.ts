@@ -160,4 +160,23 @@ export const healthApi = {
   },
 }
 
+// Game Types API
+export interface GameType {
+  id: string
+  name: string
+  description: string
+  default_port: number
+}
+
+interface GameTypesResponse {
+  game_types: GameType[]
+}
+
+export const gameTypesApi = {
+  getAll: async (): Promise<GameType[]> => {
+    const response = await apiCall.get('/api/v1/game-types') as GameTypesResponse
+    return response.game_types
+  },
+}
+
 export default apiCall

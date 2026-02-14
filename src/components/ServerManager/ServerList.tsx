@@ -1,20 +1,54 @@
 import React, { useEffect, useState } from 'react'
 import { useServersStore } from '../../store/servers/serversSlice'
-import type { Server } from '../../types/api'
+import { useNodesStore } from '../../store/nodes/nodesSlice'
+import type { Server, CreateServerRequest } from '../../types/api'
+import { ServerModal } from './ServerModal'
 
 export const ServerList: React.FC = () => {
-  const { servers, loading, error, fetchServers, removeServer } = useServersStore()
+  const { servers, loading, error, fetchServers, createServer, deleteServer, serverAction } = useServersStore()
+  const { nodes, fetchNodes } = useNodesStore()
   const [filter, setFilter] = useState<string>('all')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [deletingServerId, setDeletingServerId] = useState<string | null>(null)
+  const [actioningServerId, setActioningServerId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchServers()
-  }, [fetchServers])
+    fetchNodes()
+  }, [fetchServers, fetchNodes])
 
   const filteredServers = filter === 'all'
     ? servers
     : servers.filter(s => s.status === filter)
 
-  if (loading) {
+  const handleCreateServer = () => {
+    setIsModalOpen(true)
+  }
+
+  const handleModalSubmit = async (data: CreateServerRequest) => {
+    const result = await createServer(data)
+    if (result) {
+      setIsModalOpen(false)
+    }
+  }
+
+  const handleDeleteServer = async (serverId: string) => {
+    setDeletingServerId(serverId)
+    const success = await deleteServer(serverId)
+    if (success) {
+      setDeletingServerId(null)
+    }
+  }
+
+  const handleServerAction = async (serverId: string, action: string) => {
+    setActioningServerId(serverId)
+    const success = await serverAction(serverId, action)
+    if (success) {
+      setActioningServerId(null)
+    }
+  }
+
+  if (loading && servers.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="spinner" />
@@ -55,7 +89,10 @@ export const ServerList: React.FC = () => {
             <option value="installing">Installing</option>
             <option value="error">Error</option>
           </select>
-          <button className="btn btn-success flex items-center gap-2">
+          <button 
+            onClick={handleCreateServer}
+            className="btn btn-success flex items-center gap-2"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -124,7 +161,10 @@ export const ServerList: React.FC = () => {
               <ServerRow 
                 key={server.id} 
                 server={server} 
-                onDelete={() => removeServer(server.id)}
+                onDelete={() => handleDeleteServer(server.id)}
+                onAction={(action) => handleServerAction(server.id, action)}
+                isDeleting={deletingServerId === server.id}
+                isActioning={actioningServerId === server.id}
               />
             ))}
           </tbody>
@@ -140,6 +180,15 @@ export const ServerList: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Server Modal */}
+      <ServerModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        nodes={nodes}
+        loading={loading}
+      />
     </div>
   )
 }
@@ -147,9 +196,12 @@ export const ServerList: React.FC = () => {
 interface ServerRowProps {
   server: Server
   onDelete: () => void
+  onAction: (action: string) => void
+  isDeleting: boolean
+  isActioning: boolean
 }
 
-const ServerRow: React.FC<ServerRowProps> = ({ server, onDelete }) => {
+const ServerRow: React.FC<ServerRowProps> = ({ server, onDelete, onAction, isDeleting, isActioning }) => {
   const statusConfig = {
     running: {
       status: 'status-online',
@@ -194,11 +246,7 @@ const ServerRow: React.FC<ServerRowProps> = ({ server, onDelete }) => {
   }
 
   const config = statusConfig[server.status] || statusConfig.stopped
-
-  const handleAction = async (action: string) => {
-    // TODO: Implement server actions
-    console.log(`Action: ${action} on server: ${server.id}`)
-  }
+  const isLoading = isDeleting || isActioning
 
   return (
     <tr className="table-row hover:bg-dark-600 transition-colors">
@@ -251,18 +299,24 @@ const ServerRow: React.FC<ServerRowProps> = ({ server, onDelete }) => {
       <td className="px-6 py-4">
         <div className="flex items-center gap-1">
           <button 
-            onClick={() => handleAction('start')}
-            className="p-2 rounded-lg text-neon-green hover:bg-dark-500 transition-colors group"
+            onClick={() => onAction('start')}
+            disabled={isLoading || server.status === 'running'}
+            className="p-2 rounded-lg text-neon-green hover:bg-dark-500 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
             title="Start"
           >
-            <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            {isActioning ? (
+              <div className="spinner w-4 h-4" />
+            ) : (
+              <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
           </button>
           <button 
-            onClick={() => handleAction('stop')}
-            className="p-2 rounded-lg text-neon-red hover:bg-dark-500 transition-colors group"
+            onClick={() => onAction('stop')}
+            disabled={isLoading || server.status === 'stopped'}
+            className="p-2 rounded-lg text-neon-red hover:bg-dark-500 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
             title="Stop"
           >
             <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,8 +325,9 @@ const ServerRow: React.FC<ServerRowProps> = ({ server, onDelete }) => {
             </svg>
           </button>
           <button 
-            onClick={() => handleAction('restart')}
-            className="p-2 rounded-lg text-neon-yellow hover:bg-dark-500 transition-colors group"
+            onClick={() => onAction('restart')}
+            disabled={isLoading}
+            className="p-2 rounded-lg text-neon-yellow hover:bg-dark-500 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
             title="Restart"
           >
             <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,12 +336,17 @@ const ServerRow: React.FC<ServerRowProps> = ({ server, onDelete }) => {
           </button>
           <button 
             onClick={onDelete}
-            className="p-2 rounded-lg text-gray-400 hover:text-neon-red hover:bg-dark-500 transition-colors group"
+            disabled={isLoading}
+            className="p-2 rounded-lg text-gray-400 hover:text-neon-red hover:bg-dark-500 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
             title="Delete"
           >
-            <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+            {isDeleting ? (
+              <div className="spinner w-4 h-4" />
+            ) : (
+              <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            )}
           </button>
         </div>
       </td>

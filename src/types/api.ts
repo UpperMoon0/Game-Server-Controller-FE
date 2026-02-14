@@ -3,18 +3,9 @@
 export interface Node {
   id: string
   name: string
-  hostname: string
-  ip_address: string
   port: number
   status: NodeStatus
-  game_types: string[]
-  total_cpu_cores: number
-  total_memory_mb: number
-  total_storage_mb: number
-  available_cpu_cores: number
-  available_memory_mb: number
-  available_storage_mb: number
-  os_version: string
+  game_type: string
   agent_version: string
   heartbeat_interval: number
   last_heartbeat: string
@@ -76,10 +67,6 @@ export interface ClusterMetrics {
   total_nodes: number
   online_nodes: number
   offline_nodes: number
-  total_cpu_cores: number
-  used_cpu_cores: number
-  total_memory_mb: number
-  used_memory_mb: number
 }
 
 export interface ServerCounts {
@@ -124,12 +111,14 @@ export interface ServerActionRequest {
 
 export interface CreateNodeRequest {
   name: string
-  hostname: string
-  ip_address: string
-  port: number
-  game_types: string[]
-  total_cpu_cores: number
-  total_memory_mb: number
-  total_storage_mb: number
-  os_version?: string
+  port?: number
+  game_type: string
+}
+
+export interface UpdateNodeRequest {
+  name?: string
+  port?: number
+  game_type?: string
+  heartbeat_interval?: number
+  status?: NodeStatus
 }

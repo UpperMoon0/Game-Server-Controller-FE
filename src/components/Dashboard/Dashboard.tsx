@@ -2,14 +2,21 @@ import { useEffect, useState } from 'react'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
 import { useServersStore } from '../../store/servers/serversSlice'
 import { clusterApi } from '../../services/api'
-import type { ClusterMetrics } from '../../types/api'
+import type { ClusterMetrics, CreateNodeRequest, CreateServerRequest } from '../../types/api'
+import { NodeModal } from '../NodeManager/NodeModal'
+import { ServerModal } from '../ServerManager/ServerModal'
 
 export const Dashboard: React.FC = () => {
-  const { nodes } = useNodesStore()
-  const { servers } = useServersStore()
+  const { nodes, fetchNodes, createNode, loading: nodesLoading } = useNodesStore()
+  const { servers, fetchServers, createServer, loading: serversLoading } = useServersStore()
   const [clusterMetrics, setClusterMetrics] = useState<ClusterMetrics | null>(null)
+  const [isNodeModalOpen, setIsNodeModalOpen] = useState(false)
+  const [isServerModalOpen, setIsServerModalOpen] = useState(false)
 
   useEffect(() => {
+    fetchNodes()
+    fetchServers()
+    
     const loadMetrics = async () => {
       try {
         const data = await clusterApi.getMetrics()
@@ -19,10 +26,24 @@ export const Dashboard: React.FC = () => {
       }
     }
     loadMetrics()
-  }, [])
+  }, [fetchNodes, fetchServers])
 
   const onlineNodes = nodes.filter(n => n.status === 'online').length
   const runningServers = servers.filter(s => s.status === 'running').length
+
+  const handleCreateNode = async (data: CreateNodeRequest) => {
+    const result = await createNode(data)
+    if (result) {
+      setIsNodeModalOpen(false)
+    }
+  }
+
+  const handleCreateServer = async (data: CreateServerRequest) => {
+    const result = await createServer(data)
+    if (result) {
+      setIsServerModalOpen(false)
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -56,15 +77,15 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="CPU Usage"
-          value={clusterMetrics ? `${Math.round(clusterMetrics.used_cpu_cores)}%` : 'N/A'}
-          subtitle={`of ${clusterMetrics?.total_cpu_cores || 0} cores`}
+          value="N/A"
+          subtitle="Metrics not available"
           icon="cpu"
           color="purple"
         />
         <StatCard
           title="Memory Usage"
-          value={clusterMetrics ? `${Math.round(clusterMetrics.used_memory_mb)}%` : 'N/A'}
-          subtitle={`of ${clusterMetrics?.total_memory_mb || 0} MB`}
+          value="N/A"
+          subtitle="Metrics not available"
           icon="memory"
           color="pink"
         />
@@ -77,13 +98,19 @@ export const Dashboard: React.FC = () => {
           Quick Actions
         </h2>
         <div className="flex flex-wrap gap-4">
-          <button className="btn btn-primary flex items-center gap-2">
+          <button 
+            onClick={() => setIsNodeModalOpen(true)}
+            className="btn btn-primary flex items-center gap-2"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
             Add Node
           </button>
-          <button className="btn btn-success flex items-center gap-2">
+          <button 
+            onClick={() => setIsServerModalOpen(true)}
+            className="btn btn-success flex items-center gap-2"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -117,7 +144,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="font-medium text-white">{node.name}</p>
-                    <p className="text-sm text-gray-500">{node.hostname}</p>
+                    <p className="text-sm text-gray-500">{node.game_type}</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -173,6 +200,23 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Node Modal */}
+      <NodeModal
+        isOpen={isNodeModalOpen}
+        onClose={() => setIsNodeModalOpen(false)}
+        onSubmit={handleCreateNode}
+        loading={nodesLoading}
+      />
+
+      {/* Server Modal */}
+      <ServerModal
+        isOpen={isServerModalOpen}
+        onClose={() => setIsServerModalOpen(false)}
+        onSubmit={handleCreateServer}
+        nodes={nodes}
+        loading={serversLoading}
+      />
     </div>
   )
 }
