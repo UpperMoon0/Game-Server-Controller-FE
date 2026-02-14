@@ -121,7 +121,7 @@ export const NodeModal: React.FC<NodeModalProps> = ({
               onChange={handleChange}
               required
               className="input w-full"
-              placeholder="e.g., node-1, production-node"
+              placeholder="e.g., Main Node, Backup Node"
             />
           </div>
 
