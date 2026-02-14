@@ -18,6 +18,7 @@ const defaultSettings: AppSettings = {
 interface SettingsState {
   settings: AppSettings
   loading: boolean
+  initialized: boolean
   error: string | null
   saved: boolean
   fetchSettings: () => Promise<void>
@@ -31,6 +32,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set) => ({
   settings: defaultSettings,
   loading: false,
+  initialized: false,
   error: null,
   saved: false,
 
@@ -38,10 +40,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ loading: true, error: null })
     try {
       const settings = await invoke<AppSettings>('get_settings')
-      set({ settings, loading: false })
+      set({ settings, loading: false, initialized: true })
     } catch (error) {
+      console.error('Failed to fetch settings:', error)
       set({ 
         loading: false, 
+        initialized: true,
         error: String(error),
         settings: defaultSettings 
       })

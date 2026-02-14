@@ -20,24 +20,13 @@ jobs:
           VERSION=$(cat version.json | jq -r '.version')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-  build:
-    needs: get-version
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'macos-latest'
-            args: '--target universal-apple-darwin'
-          - platform: 'ubuntu-22.04'
-            args: ''
-          - platform: 'windows-latest'
-            args: ''
-
-    runs-on: ${{ matrix.platform }}
+  fetch-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      tauri-private-key: ${{ steps.kv.outputs.TAURI_PRIVATE_KEY }}
+      tauri-key-password: ${{ steps.kv.outputs.TAURI_KEY_PASSWORD }}
+      gh-pat: ${{ steps.kv.outputs.GH_PAT }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Azure Login
         uses: azure/login@v1
         with:
@@ -59,6 +48,24 @@ jobs:
             echo "TAURI_PRIVATE_KEY=$TAURI_PRIVATE_KEY" >> $GITHUB_OUTPUT
             echo "TAURI_KEY_PASSWORD=$TAURI_KEY_PASSWORD" >> $GITHUB_OUTPUT
             echo "GH_PAT=$GH_PAT" >> $GITHUB_OUTPUT
+
+  build:
+    needs: [get-version, fetch-secrets]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -88,9 +95,9 @@ jobs:
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ steps.kv.outputs.GH_PAT }}
-          TAURI_PRIVATE_KEY: ${{ steps.kv.outputs.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ steps.kv.outputs.TAURI_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ needs.fetch-secrets.outputs.gh-pat }}
+          TAURI_PRIVATE_KEY: ${{ needs.fetch-secrets.outputs.tauri-private-key }}
+          TAURI_KEY_PASSWORD: ${{ needs.fetch-secrets.outputs.tauri-key-password }}
         with:
           tagName: v${{ needs.get-version.outputs.version }}
           releaseName: 'Game Server Controller v__VERSION__'

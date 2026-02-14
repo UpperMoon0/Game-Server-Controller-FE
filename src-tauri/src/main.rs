@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
+use std::sync::Mutex;
+use reqwest::Client;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppSettings {
@@ -22,6 +24,12 @@ impl Default for AppSettings {
             dark_mode: true,
         }
     }
+}
+
+// State to hold the current API URL
+pub struct AppState {
+    api_url: Mutex<String>,
+    client: Client,
 }
 
 fn get_settings_path(app_handle: &tauri::AppHandle) -> PathBuf {
@@ -51,24 +59,35 @@ fn get_version() -> String {
 }
 
 #[tauri::command]
-fn get_settings(app_handle: tauri::AppHandle) -> Result<AppSettings, String> {
+fn get_settings(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<AppSettings, String> {
     let settings_path = get_settings_path(&app_handle);
     
-    if settings_path.exists() {
+    let settings = if settings_path.exists() {
         let content = fs::read_to_string(&settings_path)
             .map_err(|e| format!("Failed to read settings: {}", e))?;
         let settings: AppSettings = serde_json::from_str(&content)
             .map_err(|e| format!("Failed to parse settings: {}", e))?;
-        Ok(settings)
+        settings
     } else {
         let default_settings = AppSettings::default();
         save_settings_internal(&app_handle, &default_settings)?;
-        Ok(default_settings)
-    }
+        default_settings
+    };
+
+    // Update the API URL in state
+    let mut api_url = state.api_url.lock().map_err(|e| e.to_string())?;
+    *api_url = settings.api_url.clone();
+
+    Ok(settings)
 }
 
 #[tauri::command]
-fn save_settings(app_handle: tauri::AppHandle, settings: AppSettings) -> Result<(), String> {
+fn save_settings(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>, settings: AppSettings) -> Result<(), String> {
+    // Update the API URL in state
+    let mut api_url = state.api_url.lock().map_err(|e| e.to_string())?;
+    *api_url = settings.api_url.clone();
+    drop(api_url); // Release the lock before saving
+
     save_settings_internal(&app_handle, &settings)
 }
 
@@ -82,24 +101,164 @@ fn save_settings_internal(app_handle: &tauri::AppHandle, settings: &AppSettings)
 }
 
 #[tauri::command]
-fn reset_settings(app_handle: tauri::AppHandle) -> Result<AppSettings, String> {
+fn reset_settings(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<AppSettings, String> {
     let default_settings = AppSettings::default();
+    
+    // Update the API URL in state
+    let mut api_url = state.api_url.lock().map_err(|e| e.to_string())?;
+    *api_url = default_settings.api_url.clone();
+    drop(api_url); // Release the lock before saving
+
     save_settings_internal(&app_handle, &default_settings)?;
     Ok(default_settings)
 }
 
+// ==================== API Proxy Commands ====================
+
+#[tauri::command]
+async fn api_get(state: tauri::State<'_, AppState>, endpoint: String) -> Result<serde_json::Value, String> {
+    let api_url = {
+        let url = state.api_url.lock().map_err(|e| e.to_string())?;
+        url.clone()
+    };
+
+    let full_url = format!("{}{}", api_url, endpoint);
+    
+    let response = state.client
+        .get(&full_url)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("API error ({}): {}", status, error_text));
+    }
+
+    let json = response.json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    Ok(json)
+}
+
+#[tauri::command]
+async fn api_post(state: tauri::State<'_, AppState>, endpoint: String, body: serde_json::Value) -> Result<serde_json::Value, String> {
+    let api_url = {
+        let url = state.api_url.lock().map_err(|e| e.to_string())?;
+        url.clone()
+    };
+
+    let full_url = format!("{}{}", api_url, endpoint);
+    
+    let response = state.client
+        .post(&full_url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("API error ({}): {}", status, error_text));
+    }
+
+    let json = response.json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    Ok(json)
+}
+
+#[tauri::command]
+async fn api_put(state: tauri::State<'_, AppState>, endpoint: String, body: serde_json::Value) -> Result<serde_json::Value, String> {
+    let api_url = {
+        let url = state.api_url.lock().map_err(|e| e.to_string())?;
+        url.clone()
+    };
+
+    let full_url = format!("{}{}", api_url, endpoint);
+    
+    let response = state.client
+        .put(&full_url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("API error ({}): {}", status, error_text));
+    }
+
+    let json = response.json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    Ok(json)
+}
+
+#[tauri::command]
+async fn api_delete(state: tauri::State<'_, AppState>, endpoint: String) -> Result<serde_json::Value, String> {
+    let api_url = {
+        let url = state.api_url.lock().map_err(|e| e.to_string())?;
+        url.clone()
+    };
+
+    let full_url = format!("{}{}", api_url, endpoint);
+    
+    let response = state.client
+        .delete(&full_url)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("API error ({}): {}", status, error_text));
+    }
+
+    // Handle empty responses
+    let text = response.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+    if text.is_empty() {
+        return Ok(serde_json::json!({}));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    Ok(json)
+}
+
 fn main() {
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .expect("Failed to create HTTP client");
+
+    let state = AppState {
+        api_url: Mutex::new("http://localhost:8080".to_string()),
+        client,
+    };
+
     tauri::Builder::default()
+        .manage(state)
         .invoke_handler(tauri::generate_handler![
             close_splashscreen,
             get_platform,
             get_version,
             get_settings,
             save_settings,
-            reset_settings
+            reset_settings,
+            api_get,
+            api_post,
+            api_put,
+            api_delete
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-

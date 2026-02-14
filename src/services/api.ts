@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { invoke } from '@tauri-apps/api/tauri'
 import type { 
   Node, 
   NodeMetrics, 
@@ -11,123 +11,153 @@ import type {
   CreateNodeRequest 
 } from '../types/api'
 
-// Default URL, will be overridden by settings
-const DEFAULT_API_URL = 'http://localhost:8080'
-
-// Create axios instance with dynamic base URL
-const createApi = (baseUrl: string = DEFAULT_API_URL) => {
-  return axios.create({
-    baseURL: baseUrl,
-    timeout: 30000,
-  })
+// Generic API methods using Tauri BFF
+const apiCall = {
+  get: async (endpoint: string): Promise<unknown> => {
+    return await invoke('api_get', { endpoint })
+  },
+  
+  post: async (endpoint: string, body: unknown = {}): Promise<unknown> => {
+    return await invoke('api_post', { endpoint, body })
+  },
+  
+  put: async (endpoint: string, body: unknown = {}): Promise<unknown> => {
+    return await invoke('api_put', { endpoint, body })
+  },
+  
+  delete: async (endpoint: string): Promise<unknown> => {
+    return await invoke('api_delete', { endpoint })
+  }
 }
 
-// Default API instance
-let api = createApi()
-
-// Function to update the base URL
-export const setApiBaseUrl = (url: string) => {
-  api = createApi(url)
+// Response types for API calls
+interface NodesResponse {
+  nodes: Node[]
 }
 
-// Function to get current API instance
-export const getApi = () => api
+interface NodeResponse {
+  node: Node
+}
+
+interface ServersResponse {
+  servers: Server[]
+}
+
+interface ServerResponse {
+  server: Server
+}
+
+interface NodeMetricsResponse {
+  metrics: NodeMetrics
+}
+
+interface ServerMetricsResponse {
+  metrics: ServerMetrics
+}
+
+interface ClusterMetricsResponse {
+  nodes: ClusterMetrics
+  servers: ServerCounts
+}
+
+interface LogsResponse {
+  logs: string[]
+}
 
 // Nodes API
 export const nodesApi = {
   getAll: async (status?: string): Promise<Node[]> => {
-    const params = status ? { status } : {}
-    const response = await api.get('/api/v1/nodes', { params })
-    return response.data.nodes
+    const endpoint = status ? `/api/v1/nodes?status=${status}` : '/api/v1/nodes'
+    const response = await apiCall.get(endpoint) as NodesResponse
+    return response.nodes
   },
 
   getById: async (id: string): Promise<Node> => {
-    const response = await api.get(`/api/v1/nodes/${id}`)
-    return response.data
+    return await apiCall.get(`/api/v1/nodes/${id}`) as Node
   },
 
   create: async (data: CreateNodeRequest): Promise<Node> => {
-    const response = await api.post('/api/v1/nodes', data)
-    return response.data.node
+    const response = await apiCall.post('/api/v1/nodes', data) as NodeResponse
+    return response.node
   },
 
   update: async (id: string, data: Partial<Node>): Promise<Node> => {
-    const response = await api.put(`/api/v1/nodes/${id}`, data)
-    return response.data.node
+    const response = await apiCall.put(`/api/v1/nodes/${id}`, data) as NodeResponse
+    return response.node
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/api/v1/nodes/${id}`)
+    await apiCall.delete(`/api/v1/nodes/${id}`)
   },
 
   getMetrics: async (id: string): Promise<NodeMetrics> => {
-    const response = await api.get(`/api/v1/nodes/${id}/metrics`)
-    return response.data.metrics
+    const response = await apiCall.get(`/api/v1/nodes/${id}/metrics`) as NodeMetricsResponse
+    return response.metrics
   },
 }
 
 // Servers API
 export const serversApi = {
   getAll: async (filters?: Record<string, string>): Promise<Server[]> => {
-    const response = await api.get('/api/v1/servers', { params: filters })
-    return response.data.servers
+    const queryString = filters 
+      ? '?' + new URLSearchParams(filters).toString() 
+      : ''
+    const response = await apiCall.get(`/api/v1/servers${queryString}`) as ServersResponse
+    return response.servers
   },
 
   getById: async (id: string): Promise<Server> => {
-    const response = await api.get(`/api/v1/servers/${id}`)
-    return response.data
+    return await apiCall.get(`/api/v1/servers/${id}`) as Server
   },
 
   create: async (data: CreateServerRequest): Promise<CreateServerResponse> => {
-    const response = await api.post('/api/v1/servers', data)
-    return response.data
+    return await apiCall.post('/api/v1/servers', data) as CreateServerResponse
   },
 
   update: async (id: string, data: Partial<Server>): Promise<Server> => {
-    const response = await api.put(`/api/v1/servers/${id}`, data)
-    return response.data.server
+    const response = await apiCall.put(`/api/v1/servers/${id}`, data) as ServerResponse
+    return response.server
   },
 
   delete: async (id: string, backup?: boolean): Promise<void> => {
-    await api.delete(`/api/v1/servers/${id}`, { params: { backup } })
+    const endpoint = backup 
+      ? `/api/v1/servers/${id}?backup=${backup}` 
+      : `/api/v1/servers/${id}`
+    await apiCall.delete(endpoint)
   },
 
   action: async (id: string, action: string): Promise<void> => {
-    await api.post(`/api/v1/servers/${id}/action`, { action })
+    await apiCall.post(`/api/v1/servers/${id}/action`, { action })
   },
 
   getLogs: async (id: string, tail?: number): Promise<string[]> => {
-    const response = await api.get(`/api/v1/servers/${id}/logs`, { 
-      params: { tail: tail || 100 } 
-    })
-    return response.data.logs
+    const endpoint = `/api/v1/servers/${id}/logs?tail=${tail || 100}`
+    const response = await apiCall.get(endpoint) as LogsResponse
+    return response.logs
   },
 
   getMetrics: async (id: string): Promise<ServerMetrics> => {
-    const response = await api.get(`/api/v1/servers/${id}/metrics`)
-    return response.data.metrics
+    const response = await apiCall.get(`/api/v1/servers/${id}/metrics`) as ServerMetricsResponse
+    return response.metrics
   },
 }
 
 // Cluster API
 export const clusterApi = {
   getMetrics: async (): Promise<{ nodes: ClusterMetrics; servers: ServerCounts }> => {
-    const response = await api.get('/api/v1/metrics')
-    return response.data
+    return await apiCall.get('/api/v1/metrics') as ClusterMetricsResponse
   },
 }
 
 // Health API
 export const healthApi = {
   check: async (): Promise<{ status: string }> => {
-    const response = await api.get('/health')
-    return response.data
+    return await apiCall.get('/health') as { status: string }
   },
 
   ready: async (): Promise<{ status: string }> => {
-    const response = await api.get('/ready')
-    return response.data
+    return await apiCall.get('/ready') as { status: string }
   },
 }
 
-export default api
+export default apiCall

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { useSettingsStore } from '../../store/settings/settingsStore'
-import { setApiBaseUrl } from '../../services/api'
 
 export const Settings: React.FC = () => {
   const { 
@@ -28,8 +27,6 @@ export const Settings: React.FC = () => {
 
   const handleSave = () => {
     saveSettings(settings)
-    // Update API base URL immediately after save
-    setApiBaseUrl(settings.api_url)
   }
 
   const handleReset = () => {
