@@ -42,3 +42,4 @@ src-tauri/target/
 # Sensitive files  
 *.pem  
 *.key 
+src-tauri/Cargo.lock
