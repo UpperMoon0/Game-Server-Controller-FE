@@ -179,6 +179,17 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting 
 
   const config = statusConfig[node.status] || statusConfig.unknown
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   return (
     <div className={`card ${config.bg} border ${config.border} ${config.shadow} group`}>
       {/* Header */}
@@ -191,7 +202,7 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting 
           </div>
           <div>
             <h3 className="font-semibold text-lg text-white">{node.name}</h3>
-            <p className="text-gray-500 text-sm">{node.hostname}</p>
+            <p className="text-gray-500 text-sm">Port: {node.port}</p>
           </div>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.status}`}>
@@ -204,63 +215,35 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting 
         <div className="flex justify-between items-center py-2 border-b border-dark-400">
           <span className="text-gray-400 text-sm flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
             </svg>
-            IP Address
+            Game Type
           </span>
-          <span className="text-white font-mono text-sm">{node.ip_address}:{node.port}</span>
+          <span className="px-2 py-0.5 bg-dark-500 text-neon-cyan text-xs rounded">
+            {node.game_type}
+          </span>
         </div>
         
-        <div className="flex justify-between items-center py-2 border-b border-dark-400">
-          <span className="text-gray-400 text-sm flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-            </svg>
-            CPU Cores
-          </span>
-          <div className="flex items-center gap-2">
-            <div className="w-20 h-2 bg-dark-500 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-neon-cyan to-neon-purple rounded-full"
-                style={{ width: `${((node.total_cpu_cores - node.available_cpu_cores) / node.total_cpu_cores) * 100}%` }}
-              />
-            </div>
-            <span className="text-white text-sm">{node.available_cpu_cores}/{node.total_cpu_cores}</span>
+        {node.agent_version && (
+          <div className="flex justify-between items-center py-2 border-b border-dark-400">
+            <span className="text-gray-400 text-sm flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+              </svg>
+              Agent Version
+            </span>
+            <span className="text-white text-sm">{node.agent_version}</span>
           </div>
-        </div>
-        
-        <div className="flex justify-between items-center py-2 border-b border-dark-400">
-          <span className="text-gray-400 text-sm flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            Memory
-          </span>
-          <div className="flex items-center gap-2">
-            <div className="w-20 h-2 bg-dark-500 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-neon-pink to-neon-purple rounded-full"
-                style={{ width: `${((node.total_memory_mb - node.available_memory_mb) / node.total_memory_mb) * 100}%` }}
-              />
-            </div>
-            <span className="text-white text-sm">{Math.round(node.available_memory_mb / 1024)}/{Math.round(node.total_memory_mb / 1024)} GB</span>
-          </div>
-        </div>
+        )}
         
         <div className="flex justify-between items-center py-2">
           <span className="text-gray-400 text-sm flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Game Types
+            Created
           </span>
-          <div className="flex gap-1 flex-wrap justify-end">
-            {node.game_types.map(type => (
-              <span key={type} className="px-2 py-0.5 bg-dark-500 text-neon-cyan text-xs rounded">
-                {type}
-              </span>
-            ))}
-          </div>
+          <span className="text-white text-sm">{formatDate(node.created_at)}</span>
         </div>
       </div>
 

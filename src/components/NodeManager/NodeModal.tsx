@@ -12,14 +12,8 @@ interface NodeModalProps {
 
 const defaultFormData: CreateNodeRequest = {
   name: '',
-  hostname: '',
-  ip_address: '',
-  port: 50051,
-  game_type: '',
-  total_cpu_cores: 4,
-  total_memory_mb: 8192,
-  total_storage_mb: 102400,
-  os_version: ''
+  port: 8080,
+  game_type: ''
 }
 
 export const NodeModal: React.FC<NodeModalProps> = ({
@@ -61,14 +55,8 @@ export const NodeModal: React.FC<NodeModalProps> = ({
     if (editingNode) {
       setFormData({
         name: editingNode.name,
-        hostname: editingNode.hostname,
-        ip_address: editingNode.ip_address,
         port: editingNode.port,
-        game_type: editingNode.game_types[0] || '',
-        total_cpu_cores: editingNode.total_cpu_cores,
-        total_memory_mb: editingNode.total_memory_mb,
-        total_storage_mb: editingNode.total_storage_mb,
-        os_version: editingNode.os_version || ''
+        game_type: editingNode.game_type || ''
       })
     } else {
       // Reset to default but preserve game_type if it was already set
@@ -83,9 +71,7 @@ export const NodeModal: React.FC<NodeModalProps> = ({
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'port' || name === 'total_cpu_cores' || name === 'total_memory_mb' || name === 'total_storage_mb'
-        ? parseInt(value) || 0
-        : value
+      [name]: name === 'port' ? parseInt(value) || 0 : value
     }))
   }
 
@@ -139,53 +125,24 @@ export const NodeModal: React.FC<NodeModalProps> = ({
             />
           </div>
 
-          {/* Hostname */}
+          {/* Port */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              Hostname *
+              Port
             </label>
             <input
-              type="text"
-              name="hostname"
-              value={formData.hostname}
+              type="number"
+              name="port"
+              value={formData.port}
               onChange={handleChange}
-              required
+              min="1"
+              max="65535"
               className="input w-full"
-              placeholder="e.g., node1.example.com"
+              placeholder="e.g., 8080"
             />
-          </div>
-
-          {/* IP Address and Port */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                IP Address *
-              </label>
-              <input
-                type="text"
-                name="ip_address"
-                value={formData.ip_address}
-                onChange={handleChange}
-                required
-                className="input w-full"
-                placeholder="e.g., 192.168.1.100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Port *
-              </label>
-              <input
-                type="number"
-                name="port"
-                value={formData.port}
-                onChange={handleChange}
-                required
-                min="1"
-                max="65535"
-                className="input w-full"
-              />
-            </div>
+            <p className="text-gray-500 text-xs mt-1">
+              The port for the node agent to communicate with the controller
+            </p>
           </div>
 
           {/* Game Type Dropdown */}
@@ -218,64 +175,6 @@ export const NodeModal: React.FC<NodeModalProps> = ({
                 {gameTypes.find(t => t.id === formData.game_type)?.description}
               </p>
             )}
-          </div>
-
-          {/* Resources */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                CPU Cores
-              </label>
-              <input
-                type="number"
-                name="total_cpu_cores"
-                value={formData.total_cpu_cores}
-                onChange={handleChange}
-                min="1"
-                className="input w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Memory (MB)
-              </label>
-              <input
-                type="number"
-                name="total_memory_mb"
-                value={formData.total_memory_mb}
-                onChange={handleChange}
-                min="1024"
-                className="input w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Storage (MB)
-              </label>
-              <input
-                type="number"
-                name="total_storage_mb"
-                value={formData.total_storage_mb}
-                onChange={handleChange}
-                min="1024"
-                className="input w-full"
-              />
-            </div>
-          </div>
-
-          {/* OS Version */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              OS Version (optional)
-            </label>
-            <input
-              type="text"
-              name="os_version"
-              value={formData.os_version || ''}
-              onChange={handleChange}
-              className="input w-full"
-              placeholder="e.g., Ubuntu 22.04"
-            />
           </div>
 
           {/* Actions */}

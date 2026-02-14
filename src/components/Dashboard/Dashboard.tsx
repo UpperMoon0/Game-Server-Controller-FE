@@ -77,15 +77,15 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="CPU Usage"
-          value={clusterMetrics ? `${Math.round(clusterMetrics.used_cpu_cores)}%` : 'N/A'}
-          subtitle={`of ${clusterMetrics?.total_cpu_cores || 0} cores`}
+          value="N/A"
+          subtitle="Metrics not available"
           icon="cpu"
           color="purple"
         />
         <StatCard
           title="Memory Usage"
-          value={clusterMetrics ? `${Math.round(clusterMetrics.used_memory_mb)}%` : 'N/A'}
-          subtitle={`of ${clusterMetrics?.total_memory_mb || 0} MB`}
+          value="N/A"
+          subtitle="Metrics not available"
           icon="memory"
           color="pink"
         />
@@ -144,7 +144,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="font-medium text-white">{node.name}</p>
-                    <p className="text-sm text-gray-500">{node.hostname}</p>
+                    <p className="text-sm text-gray-500">{node.game_type}</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
