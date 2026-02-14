@@ -23,7 +23,7 @@ interface NodesState {
 export const useNodesStore = create<NodesState>()(
   devtools(
     persist(
-      (set, get) => ({
+      (set) => ({
         nodes: [],
         selectedNodeId: null,
         metrics: {},

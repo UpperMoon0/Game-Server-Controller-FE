@@ -25,7 +25,7 @@ interface ServersState {
 export const useServersStore = create<ServersState>()(
   devtools(
     persist(
-      (set, get) => ({
+      (set) => ({
         servers: [],
         selectedServerId: null,
         metrics: {},

@@ -1,21 +1,19 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
 import { useServersStore } from '../../store/servers/serversSlice'
 import { clusterApi } from '../../services/api'
-import type { ClusterMetrics, ServerCounts } from '../../types/api'
+import type { ClusterMetrics } from '../../types/api'
 
 export const Dashboard: React.FC = () => {
   const { nodes } = useNodesStore()
   const { servers } = useServersStore()
   const [clusterMetrics, setClusterMetrics] = useState<ClusterMetrics | null>(null)
-  const [serverCounts, setServerCounts] = useState<ServerCounts | null>(null)
 
   useEffect(() => {
     const loadMetrics = async () => {
       try {
         const data = await clusterApi.getMetrics()
         setClusterMetrics(data.nodes)
-        setServerCounts(data.servers)
       } catch (error) {
         console.error('Failed to load cluster metrics:', error)
       }
