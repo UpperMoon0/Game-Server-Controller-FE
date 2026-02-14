@@ -59,5 +59,27 @@ jobs:
             librsvg2-dev \
             dbus-x11
 
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Fetch Secrets from Key Vault
+        id: kv
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            TAURI_PRIVATE_KEY=$(az keyvault secret show --vault-name nstutcommonkv --name tauri-private-key --query value -o tsv)
+            TAURI_KEY_PASSWORD=$(az keyvault secret show --vault-name nstutcommonkv --name tauri-key-password --query value -o tsv)
+            
+            echo "::add-mask::$TAURI_PRIVATE_KEY"
+            echo "::add-mask::$TAURI_KEY_PASSWORD"
+            
+            echo "TAURI_PRIVATE_KEY=$TAURI_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "TAURI_KEY_PASSWORD=$TAURI_KEY_PASSWORD" >> $GITHUB_OUTPUT
+
       - name: Build Tauri app
         run: npm run tauri build
+        env:
+          TAURI_PRIVATE_KEY: ${{ steps.kv.outputs.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ steps.kv.outputs.TAURI_KEY_PASSWORD }}
