@@ -1,31 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
 import { useServersStore } from '../../store/servers/serversSlice'
-import { clusterApi } from '../../services/api'
-import type { ClusterMetrics, CreateNodeRequest, CreateServerRequest } from '../../types/api'
+import type { CreateNodeRequest, CreateServerRequest } from '../../types/api'
 import { NodeModal } from '../NodeManager/NodeModal'
 import { ServerModal } from '../ServerManager/ServerModal'
 
 export const Dashboard: React.FC = () => {
   const { nodes, fetchNodes, createNode, loading: nodesLoading } = useNodesStore()
   const { servers, fetchServers, createServer, loading: serversLoading } = useServersStore()
-  const [clusterMetrics, setClusterMetrics] = useState<ClusterMetrics | null>(null)
   const [isNodeModalOpen, setIsNodeModalOpen] = useState(false)
   const [isServerModalOpen, setIsServerModalOpen] = useState(false)
 
   useEffect(() => {
     fetchNodes()
     fetchServers()
-    
-    const loadMetrics = async () => {
-      try {
-        const data = await clusterApi.getMetrics()
-        setClusterMetrics(data.nodes)
-      } catch (error) {
-        console.error('Failed to load cluster metrics:', error)
-      }
-    }
-    loadMetrics()
   }, [fetchNodes, fetchServers])
 
   const onlineNodes = nodes.filter(n => n.status === 'online').length

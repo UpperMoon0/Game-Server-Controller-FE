@@ -186,12 +186,11 @@ export const ServerModal: React.FC<ServerModalProps> = ({
                         </div>
                         <div>
                           <div className="text-white font-medium">{node.name}</div>
-                          <div className="text-gray-500 text-sm">{node.hostname}</div>
+                          <div className="text-gray-500 text-sm">{node.game_type}</div>
                         </div>
                       </div>
                       <div className="mt-2 flex gap-2 text-xs text-gray-400">
-                        <span>CPU: {node.available_cpu_cores}/{node.total_cpu_cores}</span>
-                        <span>RAM: {Math.round(node.available_memory_mb/1024)}GB</span>
+                        <span>Port: {node.port}</span>
                       </div>
                     </button>
                   ))}
