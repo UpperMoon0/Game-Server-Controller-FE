@@ -55,7 +55,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   saveSettings: async (settings: AppSettings) => {
     set({ loading: true, error: null })
     try {
-      await invoke('save_settings', { settings })
+      await invoke('save_settings_cmd', { settings })
       set({ settings, loading: false, saved: true })
     } catch (error) {
       set({ loading: false, error: String(error) })
@@ -72,7 +72,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   resetSettings: async () => {
     set({ loading: true, error: null })
     try {
-      const settings = await invoke<AppSettings>('reset_settings')
+      const settings = await invoke<AppSettings>('reset_settings_cmd')
       set({ settings, loading: false, saved: true })
     } catch (error) {
       set({ loading: false, error: String(error) })
