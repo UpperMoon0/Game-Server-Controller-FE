@@ -373,3 +373,19 @@ body {
   filter: brightness(1.2);
   box-shadow: 0 0 20px currentColor;
 }
+
+/* Toast slide-in animation */
+@keyframes slide-in {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
+import { toast } from '../../store/toast/toastStore'
 import type { Node, CreateNodeRequest } from '../../types/api'
 import { NodeModal } from './NodeModal'
 
@@ -33,6 +34,11 @@ export const NodeList: React.FC = () => {
     const success = await deleteNode(nodeId)
     if (success) {
       setDeletingNodeId(null)
+      toast.success('Node deleted successfully')
+    } else {
+      const error = useNodesStore.getState().error
+      toast.error(error || 'Failed to delete node')
+      setDeletingNodeId(null)
     }
   }
 
@@ -42,6 +48,10 @@ export const NodeList: React.FC = () => {
       if (success) {
         setIsModalOpen(false)
         setEditingNode(null)
+        toast.success('Node updated successfully')
+      } else {
+        const error = useNodesStore.getState().error
+        toast.error(error || 'Failed to update node')
       }
     } else {
       const success = await createNode(data)
@@ -50,6 +60,10 @@ export const NodeList: React.FC = () => {
         setEditingNode(null)
         // Refresh the list to show the new node
         fetchNodes()
+        toast.success('Node created successfully! Waiting for node agent to register.')
+      } else {
+        const error = useNodesStore.getState().error
+        toast.error(error || 'Failed to create node')
       }
     }
   }

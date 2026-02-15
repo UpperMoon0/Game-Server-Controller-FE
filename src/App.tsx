@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Common/Layout'
+import { ToastContainer } from './components/Common/ToastContainer'
 import { Dashboard } from './components/Dashboard/Dashboard'
 import { NodeList } from './components/NodeManager/NodeList'
 import { Settings } from './components/Settings/Settings'
@@ -40,6 +41,7 @@ function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
+      <ToastContainer />
     </BrowserRouter>
   )
 }

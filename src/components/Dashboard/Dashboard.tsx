@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
+import { toast } from '../../store/toast/toastStore'
 import type { CreateNodeRequest } from '../../types/api'
 import { NodeModal } from '../NodeManager/NodeModal'
 
@@ -19,6 +20,10 @@ export const Dashboard: React.FC = () => {
     if (success) {
       setIsNodeModalOpen(false)
       fetchNodes() // Refresh the list
+      toast.success('Node created successfully! Waiting for node agent to register.')
+    } else {
+      const error = useNodesStore.getState().error
+      toast.error(error || 'Failed to create node')
     }
   }
 
