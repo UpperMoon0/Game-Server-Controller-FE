@@ -83,8 +83,9 @@ export const nodesApi = {
     return response.metrics
   },
 
-  action: async (id: string, action: string): Promise<void> => {
-    await apiCall.post(`/api/v1/nodes/${id}/action`, { action })
+  action: async (id: string, action: string, params?: Record<string, string>): Promise<{ message: string; initialized?: boolean }> => {
+    const body = { action, ...params }
+    return await apiCall.post(`/api/v1/nodes/${id}/action`, body) as { message: string; initialized?: boolean }
   },
 }
 

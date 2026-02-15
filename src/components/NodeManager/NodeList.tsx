@@ -5,11 +5,12 @@ import type { Node, CreateNodeRequest } from '../../types/api'
 import { NodeModal } from './NodeModal'
 
 export const NodeList: React.FC = () => {
-  const { nodes, loading, error, fetchNodes, createNode, updateNodeData, deleteNode } = useNodesStore()
+  const { nodes, loading, error, fetchNodes, createNode, updateNodeData, deleteNode, initializeNode } = useNodesStore()
   const [filter, setFilter] = useState<string>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingNode, setEditingNode] = useState<Node | null>(null)
   const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null)
+  const [initializingNodeId, setInitializingNodeId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchNodes()
@@ -39,6 +40,18 @@ export const NodeList: React.FC = () => {
       const error = useNodesStore.getState().error
       toast.error(error || 'Failed to delete node')
       setDeletingNodeId(null)
+    }
+  }
+
+  const handleInitializeNode = async (node: Node) => {
+    setInitializingNodeId(node.id)
+    const result = await initializeNode(node.id, node.game_type)
+    if (result.success) {
+      setInitializingNodeId(null)
+      toast.success('Node initialized successfully')
+    } else {
+      toast.error(result.message || 'Failed to initialize node')
+      setInitializingNodeId(null)
     }
   }
 
@@ -136,7 +149,9 @@ export const NodeList: React.FC = () => {
             node={node} 
             onEdit={() => handleEditNode(node)}
             onDelete={() => handleDeleteNode(node.id)}
+            onInitialize={() => handleInitializeNode(node)}
             isDeleting={deletingNodeId === node.id}
+            isInitializing={initializingNodeId === node.id}
           />
         ))}
       </div>
@@ -167,10 +182,12 @@ interface NodeCardProps {
   node: Node
   onEdit: () => void
   onDelete: () => void
+  onInitialize: () => void
   isDeleting: boolean
+  isInitializing: boolean
 }
 
-const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting }) => {
+const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, onInitialize, isDeleting, isInitializing }) => {
   const statusConfig: Record<string, { bg: string; border: string; text: string; status: string; shadow: string }> = {
     running: {
       bg: 'bg-dark-600',
@@ -327,9 +344,26 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting 
         >
           Edit
         </button>
-        <button className="btn btn-secondary flex-1 text-sm py-2">
-          Actions
-        </button>
+        {!node.initialized ? (
+          <button 
+            onClick={onInitialize}
+            disabled={isInitializing}
+            className="btn btn-secondary flex-1 text-sm py-2 disabled:opacity-50"
+          >
+            {isInitializing ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="spinner w-4 h-4" />
+                <span>Initializing...</span>
+              </div>
+            ) : (
+              'Initialize'
+            )}
+          </button>
+        ) : (
+          <button className="btn btn-secondary flex-1 text-sm py-2 opacity-50 cursor-not-allowed">
+            Initialized
+          </button>
+        )}
         <button 
           onClick={onDelete}
           disabled={isDeleting}

@@ -10,6 +10,7 @@ export interface Node {
   game_type: string
   version: string
   port: number
+  initialized: boolean
   
   // Agent Connection
   agent_version: string

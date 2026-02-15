@@ -17,6 +17,7 @@ interface NodesState {
   createNode: (data: CreateNodeRequest) => Promise<boolean>
   updateNodeData: (id: string, data: Partial<Node>) => Promise<boolean>
   deleteNode: (nodeId: string) => Promise<boolean>
+  initializeNode: (nodeId: string, gameType?: string) => Promise<{ success: boolean; message?: string }>
   clearError: () => void
 }
 
@@ -109,6 +110,25 @@ export const useNodesStore = create<NodesState>()(
               error: error instanceof Error ? error.message : 'Failed to delete node' 
             })
             return false
+          }
+        },
+
+        initializeNode: async (nodeId: string, gameType?: string) => {
+          set({ loading: true, error: null })
+          try {
+            const params = gameType ? { game_type: gameType } : undefined
+            await nodesApi.action(nodeId, 'initialize', params)
+            // Refresh nodes to get updated initialized status
+            const nodes = await nodesApi.getAll()
+            set({ nodes, loading: false })
+            return { success: true }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to initialize node'
+            set({ 
+              loading: false, 
+              error: message
+            })
+            return { success: false, message }
           }
         },
 
