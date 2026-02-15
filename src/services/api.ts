@@ -115,4 +115,21 @@ export const gameTypesApi = {
   },
 }
 
+// Config API
+interface ConfigResponse {
+  grpc_advertise_host: string
+  grpc_port: number
+  grpc_advertise_address: string
+}
+
+export const configApi = {
+  get: async (): Promise<ConfigResponse> => {
+    return await apiCall.get('/api/v1/config') as ConfigResponse
+  },
+
+  update: async (data: { grpc_advertise_host?: string }): Promise<ConfigResponse> => {
+    return await apiCall.put('/api/v1/config', data) as ConfigResponse
+  },
+}
+
 export default apiCall

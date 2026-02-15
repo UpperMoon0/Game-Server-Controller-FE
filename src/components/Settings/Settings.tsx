@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSettingsStore } from '../../store/settings/settingsStore'
+import { configApi } from '../../services/api'
 
 export const Settings: React.FC = () => {
   const { 
@@ -14,9 +15,27 @@ export const Settings: React.FC = () => {
     clearSaved 
   } = useSettingsStore()
 
+  // Controller config state
+  const [advertiseHost, setAdvertiseHost] = useState<string>('')
+  const [advertiseHostLoading, setAdvertiseHostLoading] = useState(false)
+  const [advertiseHostSaved, setAdvertiseHostSaved] = useState(false)
+
   useEffect(() => {
     fetchSettings()
   }, [fetchSettings])
+
+  useEffect(() => {
+    // Fetch controller config
+    const fetchControllerConfig = async () => {
+      try {
+        const config = await configApi.get()
+        setAdvertiseHost(config.grpc_advertise_host)
+      } catch (err) {
+        console.error('Failed to fetch controller config:', err)
+      }
+    }
+    fetchControllerConfig()
+  }, [])
 
   useEffect(() => {
     if (saved) {
@@ -25,12 +44,31 @@ export const Settings: React.FC = () => {
     }
   }, [saved, clearSaved])
 
+  useEffect(() => {
+    if (advertiseHostSaved) {
+      const timer = setTimeout(() => setAdvertiseHostSaved(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [advertiseHostSaved])
+
   const handleSave = () => {
     saveSettings(settings)
   }
 
   const handleReset = () => {
     resetSettings()
+  }
+
+  const handleSaveAdvertiseHost = async () => {
+    setAdvertiseHostLoading(true)
+    try {
+      await configApi.update({ grpc_advertise_host: advertiseHost })
+      setAdvertiseHostSaved(true)
+    } catch (err) {
+      console.error('Failed to save advertise host:', err)
+    } finally {
+      setAdvertiseHostLoading(false)
+    }
   }
 
   return (
@@ -189,6 +227,71 @@ export const Settings: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>Settings saved!</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Controller Settings */}
+      <div className="card max-w-2xl">
+        <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+          <span className="w-1 h-5 bg-neon-green rounded-full" />
+          Controller Settings
+        </h2>
+        
+        <div className="space-y-6">
+          {/* gRPC Advertise Host */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              gRPC Advertise Host
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={advertiseHost}
+                onChange={(e) => setAdvertiseHost(e.target.value)}
+                className="input w-full pl-10"
+                placeholder="host.docker.internal"
+              />
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              The host address that node agents use to connect to the controller. 
+              For Docker, use "host.docker.internal" or your host's IP address.
+            </p>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="mt-8 pt-6 border-t border-dark-400 flex items-center gap-4">
+          <button
+            onClick={handleSaveAdvertiseHost}
+            disabled={advertiseHostLoading}
+            className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {advertiseHostLoading ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            Save Controller Settings
+          </button>
+          
+          {advertiseHostSaved && (
+            <div className="flex items-center gap-2 text-neon-green animate-pulse">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Controller settings saved!</span>
             </div>
           )}
         </div>
