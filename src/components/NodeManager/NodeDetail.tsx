@@ -5,6 +5,7 @@ import { toast } from '../../store/toast/toastStore'
 import type { FileInfo, ClipboardItem } from '../../types/files'
 import type { Node } from '../../types/api'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
+import { nodesApi } from '../../services/api'
 
 // File Explorer Component
 export const NodeDetail: React.FC = () => {
@@ -21,10 +22,12 @@ export const NodeDetail: React.FC = () => {
   const [showNewFileDialog, setShowNewFileDialog] = useState(false)
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
   const [showRenameDialog, setShowRenameDialog] = useState(false)
+  const [showUpdateImageDialog, setShowUpdateImageDialog] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [renameItem, setRenameItem] = useState<FileInfo | null>(null)
   const [uploading, setUploading] = useState(false)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [updatingImage, setUpdatingImage] = useState(false)
 
   // Load node info
   useEffect(() => {
@@ -249,6 +252,45 @@ export const NodeDetail: React.FC = () => {
     }
   }
 
+  // Node container actions
+  const handleRestartNode = async () => {
+    if (!id) return
+    
+    if (!confirm('Are you sure you want to restart this node container? This will temporarily disconnect the node.')) return
+    
+    try {
+      await nodesApi.nodeAction(id, 'restart')
+      toast.success('Node container restarted successfully')
+      // Refresh node list to get updated status
+      fetchNodes()
+    } catch (error) {
+      toast.error(`Failed to restart node: ${error}`)
+    }
+  }
+
+  const handleUpdateImage = async () => {
+    if (!id) return
+    
+    try {
+      setUpdatingImage(true)
+      const response = await nodesApi.nodeAction(id, 'update-image')
+      
+      if (response.skipped) {
+        toast.info('Container is already running the latest image')
+      } else {
+        toast.success('Node container updated to latest image successfully')
+      }
+      
+      setShowUpdateImageDialog(false)
+      // Refresh node list to get updated info
+      fetchNodes()
+    } catch (error) {
+      toast.error(`Failed to update node image: ${error}`)
+    } finally {
+      setUpdatingImage(false)
+    }
+  }
+
   // Format file size
   const formatSize = (bytes: number): string => {
     if (bytes === 0) return '0 B'
@@ -276,7 +318,7 @@ export const NodeDetail: React.FC = () => {
         >
           Root
         </button>
-        {parts.map((part, index) => {
+        {parts.map((part) => {
           pathAccum += '/' + part
           const path = pathAccum
           return (
@@ -321,7 +363,7 @@ export const NodeDetail: React.FC = () => {
             <p className="text-gray-400 mt-1">File Explorer</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
             node.status === 'running' ? 'status-online' : 'status-offline'
           }`}>
@@ -330,6 +372,27 @@ export const NodeDetail: React.FC = () => {
           <span className="px-3 py-1 rounded-full text-xs font-medium bg-dark-500 text-neon-cyan">
             {node.game_type}
           </span>
+          <div className="h-6 w-px bg-dark-400 mx-2" />
+          <button 
+            onClick={handleRestartNode}
+            className="btn btn-secondary flex items-center gap-2"
+            title="Restart node container"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Restart
+          </button>
+          <button 
+            onClick={() => setShowUpdateImageDialog(true)}
+            className="btn btn-primary flex items-center gap-2"
+            title="Update node container image"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Update Image
+          </button>
         </div>
       </div>
 
@@ -710,6 +773,43 @@ export const NodeDetail: React.FC = () => {
                 className="btn btn-primary"
               >
                 Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Image Dialog */}
+      {showUpdateImageDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="card w-full max-w-md">
+            <h3 className="text-xl font-semibold text-white mb-4">Update to Latest Image</h3>
+            <p className="text-gray-400 text-sm mb-4">
+              This will pull the latest node agent image and update the container. 
+              All data in volumes will be preserved. If the container is already running 
+              the latest image, the update will be skipped.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button 
+                onClick={() => setShowUpdateImageDialog(false)}
+                className="btn btn-secondary"
+                disabled={updatingImage}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleUpdateImage}
+                className="btn btn-primary"
+                disabled={updatingImage}
+              >
+                {updatingImage ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 spinner" />
+                    Updating...
+                  </span>
+                ) : (
+                  'Update to Latest'
+                )}
               </button>
             </div>
           </div>

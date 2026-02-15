@@ -87,6 +87,27 @@ export const nodesApi = {
     const body = { action, ...params }
     return await apiCall.post(`/api/v1/nodes/${id}/action`, body) as { message: string; initialized?: boolean }
   },
+
+  nodeAction: async (id: string, action: string): Promise<{ 
+    message: string
+    updated?: boolean
+    skipped?: boolean
+    new_image?: string
+    new_container_id?: string
+    old_digest?: string
+    new_digest?: string
+  }> => {
+    const body: Record<string, unknown> = { action }
+    return await apiCall.post(`/api/v1/nodes/${id}/action`, body) as { 
+      message: string
+      updated?: boolean
+      skipped?: boolean
+      new_image?: string
+      new_container_id?: string
+      old_digest?: string
+      new_digest?: string
+    }
+  },
 }
 
 // Cluster API

@@ -193,7 +193,7 @@ export const filesApi = {
     const endpoint = `/api/v1/nodes/${nodeId}/files/download?path=${encodeURIComponent(path)}`
     // For download, we need to handle the response as a blob
     const response = await invoke('api_download', { endpoint }) as { data: number[] }
-    return new Blob(new Uint8Array(response.data), { type: 'application/zip' })
+    return new Blob([new Uint8Array(response.data)], { type: 'application/zip' })
   },
 
   // Upload folder (as zip)
