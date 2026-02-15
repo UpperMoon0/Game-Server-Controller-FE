@@ -92,6 +92,81 @@ impl<'a> ApiClient<'a> {
         self.handle_response(response, "DELETE", &url).await
     }
 
+    /// Download binary data from an endpoint
+    pub async fn download(&self, endpoint: &str) -> Result<Vec<u8>, String> {
+        let url = self.build_url(endpoint)?;
+        println!("[BFF] DOWNLOAD {}", url);
+        
+        let response = self.state.client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| {
+                let err_msg = format!("Download request failed: {}", e);
+                eprintln!("[BFF ERROR] DOWNLOAD {} - {}", url, e);
+                err_msg
+            })?;
+
+        let status = response.status();
+        println!("[BFF] DOWNLOAD {} - Status: {}", url, status);
+        
+        if !status.is_success() {
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            let err_msg = format!("API error ({}): {}", status, error_text);
+            eprintln!("[BFF ERROR] DOWNLOAD {} - {}", url, err_msg);
+            return Err(err_msg);
+        }
+
+        let bytes = response.bytes().await
+            .map_err(|e| {
+                let err_msg = format!("Failed to read response bytes: {}", e);
+                eprintln!("[BFF ERROR] DOWNLOAD {} - {}", url, err_msg);
+                err_msg
+            })?;
+
+        println!("[BFF] DOWNLOAD {} - Received {} bytes", url, bytes.len());
+        Ok(bytes.to_vec())
+    }
+
+    /// Upload a file to an endpoint
+    pub async fn upload(&self, endpoint: &str, file_path: &str) -> Result<Value, String> {
+        let url = self.build_url(endpoint)?;
+        println!("[BFF] UPLOAD {} file={}", url, file_path);
+        
+        // Read the file
+        let file_content = std::fs::read(file_path)
+            .map_err(|e| {
+                let err_msg = format!("Failed to read file: {}", e);
+                eprintln!("[BFF ERROR] UPLOAD {} - {}", url, err_msg);
+                err_msg
+            })?;
+
+        let file_name = std::path::Path::new(file_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("file");
+
+        let part = reqwest::multipart::Part::bytes(file_content)
+            .file_name(file_name.to_string());
+
+        let form = reqwest::multipart::Form::new()
+            .part("file", part);
+
+        let response = self.state.client
+            .post(&url)
+            .multipart(form)
+            .send()
+            .await
+            .map_err(|e| {
+                let err_msg = format!("Upload request failed: {}", e);
+                eprintln!("[BFF ERROR] UPLOAD {} - {}", url, e);
+                err_msg
+            })?;
+
+        self.handle_response(response, "UPLOAD", &url).await
+    }
+
     /// Handle the HTTP response
     async fn handle_response(&self, response: reqwest::Response, method: &str, url: &str) -> Result<Value, String> {
         let status = response.status();

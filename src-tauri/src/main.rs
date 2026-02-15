@@ -26,7 +26,9 @@ fn main() {
             commands::api_get,
             commands::api_post,
             commands::api_put,
-            commands::api_delete
+            commands::api_delete,
+            commands::api_download,
+            commands::api_upload
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

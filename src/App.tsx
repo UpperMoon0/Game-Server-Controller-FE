@@ -4,6 +4,7 @@ import { Layout } from './components/Common/Layout'
 import { ToastContainer } from './components/Common/ToastContainer'
 import { Dashboard } from './components/Dashboard/Dashboard'
 import { NodeList } from './components/NodeManager/NodeList'
+import { NodeDetail } from './components/NodeManager/NodeDetail'
 import { Settings } from './components/Settings/Settings'
 import { useSettingsStore } from './store/settings/settingsStore'
 
@@ -38,6 +39,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="nodes" element={<NodeList />} />
+          <Route path="nodes/:id" element={<NodeDetail />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

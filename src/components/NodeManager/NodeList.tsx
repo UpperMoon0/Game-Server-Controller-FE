@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
 import { toast } from '../../store/toast/toastStore'
 import type { Node, CreateNodeRequest } from '../../types/api'
 import { NodeModal } from './NodeModal'
 
 export const NodeList: React.FC = () => {
+  const navigate = useNavigate()
   const { nodes, loading, error, fetchNodes, createNode, updateNodeData, deleteNode, initializeNode } = useNodesStore()
   const [filter, setFilter] = useState<string>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -28,6 +30,10 @@ export const NodeList: React.FC = () => {
   const handleEditNode = (node: Node) => {
     setEditingNode(node)
     setIsModalOpen(true)
+  }
+
+  const handleViewNode = (node: Node) => {
+    navigate(`/nodes/${node.id}`)
   }
 
   const handleDeleteNode = async (nodeId: string) => {
@@ -148,6 +154,7 @@ export const NodeList: React.FC = () => {
             key={node.id} 
             node={node} 
             onEdit={() => handleEditNode(node)}
+            onView={() => handleViewNode(node)}
             onDelete={() => handleDeleteNode(node.id)}
             onInitialize={() => handleInitializeNode(node)}
             isDeleting={deletingNodeId === node.id}
@@ -181,13 +188,14 @@ export const NodeList: React.FC = () => {
 interface NodeCardProps {
   node: Node
   onEdit: () => void
+  onView: () => void
   onDelete: () => void
   onInitialize: () => void
   isDeleting: boolean
   isInitializing: boolean
 }
 
-const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, onInitialize, isDeleting, isInitializing }) => {
+const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onView, onDelete, onInitialize, isDeleting, isInitializing }) => {
   const statusConfig: Record<string, { bg: string; border: string; text: string; status: string; shadow: string }> = {
     running: {
       bg: 'bg-dark-600',
@@ -268,7 +276,8 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, onInitializ
   }
 
   return (
-    <div className={`card ${config.bg} border ${config.border} ${config.shadow} group`}>
+    <div className={`card ${config.bg} border ${config.border} ${config.shadow} group cursor-pointer`}
+         onClick={onView}>
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
@@ -337,10 +346,16 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, onInitializ
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-4 border-t border-dark-400">
+      <div className="flex gap-2 pt-4 border-t border-dark-400" onClick={(e) => e.stopPropagation()}>
+        <button 
+          onClick={onView}
+          className="btn btn-primary flex-1 text-sm py-2"
+        >
+          View
+        </button>
         <button 
           onClick={onEdit}
-          className="btn btn-primary flex-1 text-sm py-2"
+          className="btn btn-secondary flex-1 text-sm py-2"
         >
           Edit
         </button>

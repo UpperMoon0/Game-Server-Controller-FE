@@ -115,3 +115,24 @@ pub async fn api_delete(
     let client = ApiClient::new(&state);
     client.delete(&endpoint).await
 }
+
+/// Download a file from the backend API (returns binary data as Vec<u8>)
+#[tauri::command]
+pub async fn api_download(
+    state: tauri::State<'_, AppState>,
+    endpoint: String,
+) -> Result<Vec<u8>, String> {
+    let client = ApiClient::new(&state);
+    client.download(&endpoint).await
+}
+
+/// Upload a file to the backend API
+#[tauri::command]
+pub async fn api_upload(
+    state: tauri::State<'_, AppState>,
+    endpoint: String,
+    file_path: String,
+) -> Result<Value, String> {
+    let client = ApiClient::new(&state);
+    client.upload(&endpoint, &file_path).await
+}
