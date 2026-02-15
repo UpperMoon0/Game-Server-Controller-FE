@@ -1,35 +1,24 @@
 import { useEffect, useState } from 'react'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
-import { useServersStore } from '../../store/servers/serversSlice'
-import type { CreateNodeRequest, CreateServerRequest } from '../../types/api'
+import type { CreateNodeRequest } from '../../types/api'
 import { NodeModal } from '../NodeManager/NodeModal'
-import { ServerModal } from '../ServerManager/ServerModal'
 
 export const Dashboard: React.FC = () => {
   const { nodes, fetchNodes, createNode, loading: nodesLoading } = useNodesStore()
-  const { servers, fetchServers, createServer, loading: serversLoading } = useServersStore()
   const [isNodeModalOpen, setIsNodeModalOpen] = useState(false)
-  const [isServerModalOpen, setIsServerModalOpen] = useState(false)
 
   useEffect(() => {
     fetchNodes()
-    fetchServers()
-  }, [fetchNodes, fetchServers])
+  }, [fetchNodes])
 
-  const onlineNodes = nodes.filter(n => n.status === 'online').length
-  const runningServers = servers.filter(s => s.status === 'running').length
+  const runningNodes = (nodes || []).filter(n => n.status === 'running').length
+  const stoppedNodes = (nodes || []).filter(n => n.status === 'stopped' || n.status === 'offline').length
 
   const handleCreateNode = async (data: CreateNodeRequest) => {
-    const result = await createNode(data)
-    if (result) {
+    const success = await createNode(data)
+    if (success) {
       setIsNodeModalOpen(false)
-    }
-  }
-
-  const handleCreateServer = async (data: CreateServerRequest) => {
-    const result = await createServer(data)
-    if (result) {
-      setIsServerModalOpen(false)
+      fetchNodes() // Refresh the list
     }
   }
 
@@ -51,29 +40,29 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Nodes"
-          value={nodes.length}
-          subtitle={`${onlineNodes} online`}
+          value={(nodes || []).length}
+          subtitle={`${runningNodes} running`}
           icon="nodes"
           color="cyan"
         />
         <StatCard
-          title="Total Servers"
-          value={servers.length}
-          subtitle={`${runningServers} running`}
+          title="Running Nodes"
+          value={runningNodes}
+          subtitle="Active game servers"
           icon="servers"
           color="green"
         />
         <StatCard
-          title="CPU Usage"
-          value="N/A"
-          subtitle="Metrics not available"
+          title="Stopped Nodes"
+          value={stoppedNodes}
+          subtitle="Offline or stopped"
           icon="cpu"
           color="purple"
         />
         <StatCard
-          title="Memory Usage"
-          value="N/A"
-          subtitle="Metrics not available"
+          title="Errors"
+          value={(nodes || []).filter(n => n.status === 'error').length}
+          subtitle="Nodes with errors"
           icon="memory"
           color="pink"
         />
@@ -95,15 +84,6 @@ export const Dashboard: React.FC = () => {
             </svg>
             Add Node
           </button>
-          <button 
-            onClick={() => setIsServerModalOpen(true)}
-            className="btn btn-success flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Create Server
-          </button>
           <button className="btn btn-secondary flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -122,7 +102,7 @@ export const Dashboard: React.FC = () => {
             Recent Nodes
           </h2>
           <div className="space-y-3">
-            {nodes.slice(0, 5).map(node => (
+            {(nodes || []).slice(0, 5).map(node => (
               <div key={node.id} className="flex items-center justify-between p-4 bg-dark-600 rounded-lg border border-dark-400 hover:border-neon-purple/30 transition-all duration-300">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-dark-500 flex items-center justify-center">
@@ -136,13 +116,14 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  node.status === 'online' ? 'status-online' : 'status-offline'
+                  node.status === 'running' ? 'status-online' : 
+                  node.status === 'error' ? 'status-offline' : 'status-stopped'
                 }`}>
                   {node.status}
                 </span>
               </div>
             ))}
-            {nodes.length === 0 && (
+            {(nodes || []).length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 No nodes found
               </div>
@@ -150,39 +131,41 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Servers */}
+        {/* Nodes by Game Type */}
         <div className="card">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <span className="w-1 h-5 bg-neon-green rounded-full" />
-            Recent Servers
+            Nodes by Game Type
           </h2>
           <div className="space-y-3">
-            {servers.slice(0, 5).map(server => (
-              <div key={server.id} className="flex items-center justify-between p-4 bg-dark-600 rounded-lg border border-dark-400 hover:border-neon-green/30 transition-all duration-300">
+            {Object.entries(
+              (nodes || []).reduce((acc, node) => {
+                acc[node.game_type] = (acc[node.game_type] || 0) + 1
+                return acc
+              }, {} as Record<string, number>)
+            ).map(([gameType, count]) => (
+              <div key={gameType} className="flex items-center justify-between p-4 bg-dark-600 rounded-lg border border-dark-400 hover:border-neon-green/30 transition-all duration-300">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-dark-500 flex items-center justify-center">
                     <svg className="w-5 h-5 text-neon-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
                     </svg>
                   </div>
                   <div>
-                    <p className="font-medium text-white">{server.name}</p>
-                    <p className="text-sm text-gray-500">{server.game_type}</p>
+                    <p className="font-medium text-white capitalize">{gameType}</p>
+                    <p className="text-sm text-gray-500">Game type</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-medium ${
-                    server.status === 'running' ? 'text-neon-green' : 'text-gray-400'
-                  }`}>
-                    {server.status}
+                  <p className="text-sm font-medium text-neon-green">
+                    {count} node{count !== 1 ? 's' : ''}
                   </p>
-                  <p className="text-xs text-gray-500">{server.player_count} players</p>
                 </div>
               </div>
             ))}
-            {servers.length === 0 && (
+            {(nodes || []).length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                No servers found
+                No nodes found
               </div>
             )}
           </div>
@@ -195,15 +178,6 @@ export const Dashboard: React.FC = () => {
         onClose={() => setIsNodeModalOpen(false)}
         onSubmit={handleCreateNode}
         loading={nodesLoading}
-      />
-
-      {/* Server Modal */}
-      <ServerModal
-        isOpen={isServerModalOpen}
-        onClose={() => setIsServerModalOpen(false)}
-        onSubmit={handleCreateServer}
-        nodes={nodes}
-        loading={serversLoading}
       />
     </div>
   )

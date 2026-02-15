@@ -1,65 +1,35 @@
 // API Types
 
+export type NodeStatus = 'installing' | 'stopped' | 'running' | 'error' | 'updating' | 'starting' | 'stopping' | 'offline' | 'maintenance'
+
+// Node represents a game server node (stored in database)
 export interface Node {
   id: string
   name: string
-  port: number
   status: NodeStatus
   game_type: string
+  version: string
+  port: number
+  
+  // Agent Connection
   agent_version: string
   heartbeat_interval: number
   last_heartbeat: string
+  
+  // Timestamps
   created_at: string
   updated_at: string
+  started_at: string | null
 }
 
-export type NodeStatus = 'online' | 'offline' | 'maintenance' | 'unknown'
-
+// NodeMetrics represents real-time metrics (fetched from node agent, not stored in DB)
 export interface NodeMetrics {
   node_id: string
+  player_count: number
   cpu_usage_percent: number
   memory_usage_percent: number
-  storage_usage_percent: number
-  network_in_bytes: number
-  network_out_bytes: number
-  active_connections: number
-  load_average: number
-  timestamp: string
-}
-
-export interface Server {
-  id: string
-  name: string
-  node_id: string
-  game_type: string
-  instance_id: string
-  status: ServerStatus
-  version: string
-  max_players: number
-  port: number
-  ip_address: string
-  player_count: number
-  cpu_usage: number
-  memory_usage: number
-  uptime_seconds: number
-  created_at: string
-  updated_at: string
-}
-
-export type ServerStatus = 'installing' | 'stopped' | 'running' | 'error' | 'updating' | 'starting' | 'stopping' | 'backing_up'
-
-export interface ServerMetrics {
-  server_id: string
-  player_count: number
-  online_players: string[]
-  cpu_usage_percent: number
   memory_usage_mb: number
-  ticks_per_second: number
-  ms_per_tick: number
-  network_bytes_in: number
-  network_bytes_out: number
   uptime_seconds: number
-  average_ping_ms: number
   timestamp: string
 }
 
@@ -69,7 +39,7 @@ export interface ClusterMetrics {
   offline_nodes: number
 }
 
-export interface ServerCounts {
+export interface NodeCounts {
   running: number
   stopped: number
   installing: number
@@ -77,48 +47,29 @@ export interface ServerCounts {
   total: number
 }
 
-export interface CreateServerRequest {
-  node_id: string
-  game_type: string
-  config: {
-    name: string
-    version: string
-    max_players: number
-    settings: Record<string, string>
-  }
-  requirements: {
-    min_cpu_cores: number
-    min_memory_mb: number
-    min_storage_mb: number
-  }
-}
-
-export interface CreateServerResponse {
-  success: boolean
-  server_id: string
-  message: string
-  server_info: {
-    server_id: string
-    node_id: string
-    port: number
-    ip_address: string
-  }
-}
-
-export interface ServerActionRequest {
-  action: 'start' | 'stop' | 'restart' | 'reinstall' | 'backup'
-}
-
 export interface CreateNodeRequest {
   name: string
-  port?: number
   game_type: string
+  version?: string
+  port?: number
 }
 
 export interface UpdateNodeRequest {
   name?: string
-  port?: number
   game_type?: string
-  heartbeat_interval?: number
+  version?: string
+  port?: number
   status?: NodeStatus
+  heartbeat_interval?: number
+}
+
+export interface NodeActionRequest {
+  action: 'start' | 'stop' | 'restart' | 'reinstall'
+}
+
+export interface GameType {
+  id: string
+  name: string
+  description: string
+  default_port: number
 }

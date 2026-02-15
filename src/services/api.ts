@@ -2,13 +2,10 @@ import { invoke } from '@tauri-apps/api/tauri'
 import type { 
   Node, 
   NodeMetrics, 
-  Server, 
-  ServerMetrics, 
   ClusterMetrics,
-  ServerCounts,
-  CreateServerRequest,
-  CreateServerResponse,
-  CreateNodeRequest 
+  NodeCounts,
+  CreateNodeRequest,
+  GameType
 } from '../types/api'
 
 // Generic API methods using Tauri BFF
@@ -33,35 +30,27 @@ const apiCall = {
 // Response types for API calls
 interface NodesResponse {
   nodes: Node[]
+  total: number
+  online: number
+  offline: number
 }
 
 interface NodeResponse {
   node: Node
-}
-
-interface ServersResponse {
-  servers: Server[]
-}
-
-interface ServerResponse {
-  server: Server
+  message?: string
 }
 
 interface NodeMetricsResponse {
   metrics: NodeMetrics
 }
 
-interface ServerMetricsResponse {
-  metrics: ServerMetrics
-}
-
 interface ClusterMetricsResponse {
   nodes: ClusterMetrics
-  servers: ServerCounts
+  node_counts: NodeCounts
 }
 
-interface LogsResponse {
-  logs: string[]
+interface GameTypesResponse {
+  game_types: GameType[]
 }
 
 // Nodes API
@@ -76,9 +65,8 @@ export const nodesApi = {
     return await apiCall.get(`/api/v1/nodes/${id}`) as Node
   },
 
-  create: async (data: CreateNodeRequest): Promise<Node> => {
-    const response = await apiCall.post('/api/v1/nodes', data) as NodeResponse
-    return response.node
+  create: async (data: CreateNodeRequest): Promise<NodeResponse> => {
+    return await apiCall.post('/api/v1/nodes', data) as NodeResponse
   },
 
   update: async (id: string, data: Partial<Node>): Promise<Node> => {
@@ -94,57 +82,15 @@ export const nodesApi = {
     const response = await apiCall.get(`/api/v1/nodes/${id}/metrics`) as NodeMetricsResponse
     return response.metrics
   },
-}
-
-// Servers API
-export const serversApi = {
-  getAll: async (filters?: Record<string, string>): Promise<Server[]> => {
-    const queryString = filters 
-      ? '?' + new URLSearchParams(filters).toString() 
-      : ''
-    const response = await apiCall.get(`/api/v1/servers${queryString}`) as ServersResponse
-    return response.servers
-  },
-
-  getById: async (id: string): Promise<Server> => {
-    return await apiCall.get(`/api/v1/servers/${id}`) as Server
-  },
-
-  create: async (data: CreateServerRequest): Promise<CreateServerResponse> => {
-    return await apiCall.post('/api/v1/servers', data) as CreateServerResponse
-  },
-
-  update: async (id: string, data: Partial<Server>): Promise<Server> => {
-    const response = await apiCall.put(`/api/v1/servers/${id}`, data) as ServerResponse
-    return response.server
-  },
-
-  delete: async (id: string, backup?: boolean): Promise<void> => {
-    const endpoint = backup 
-      ? `/api/v1/servers/${id}?backup=${backup}` 
-      : `/api/v1/servers/${id}`
-    await apiCall.delete(endpoint)
-  },
 
   action: async (id: string, action: string): Promise<void> => {
-    await apiCall.post(`/api/v1/servers/${id}/action`, { action })
-  },
-
-  getLogs: async (id: string, tail?: number): Promise<string[]> => {
-    const endpoint = `/api/v1/servers/${id}/logs?tail=${tail || 100}`
-    const response = await apiCall.get(endpoint) as LogsResponse
-    return response.logs
-  },
-
-  getMetrics: async (id: string): Promise<ServerMetrics> => {
-    const response = await apiCall.get(`/api/v1/servers/${id}/metrics`) as ServerMetricsResponse
-    return response.metrics
+    await apiCall.post(`/api/v1/nodes/${id}/action`, { action })
   },
 }
 
 // Cluster API
 export const clusterApi = {
-  getMetrics: async (): Promise<{ nodes: ClusterMetrics; servers: ServerCounts }> => {
+  getMetrics: async (): Promise<{ nodes: ClusterMetrics; node_counts: NodeCounts }> => {
     return await apiCall.get('/api/v1/metrics') as ClusterMetricsResponse
   },
 }
@@ -161,17 +107,6 @@ export const healthApi = {
 }
 
 // Game Types API
-export interface GameType {
-  id: string
-  name: string
-  description: string
-  default_port: number
-}
-
-interface GameTypesResponse {
-  game_types: GameType[]
-}
-
 export const gameTypesApi = {
   getAll: async (): Promise<GameType[]> => {
     const response = await apiCall.get('/api/v1/game-types') as GameTypesResponse

@@ -15,8 +15,8 @@ export const NodeList: React.FC = () => {
   }, [fetchNodes])
 
   const filteredNodes = filter === 'all' 
-    ? nodes 
-    : nodes.filter(n => n.status === filter)
+    ? (nodes || []) 
+    : (nodes || []).filter(n => n.status === filter)
 
   const handleAddNode = () => {
     setEditingNode(null)
@@ -38,12 +38,20 @@ export const NodeList: React.FC = () => {
 
   const handleModalSubmit = async (data: CreateNodeRequest) => {
     if (editingNode) {
-      await updateNodeData(editingNode.id, data)
+      const success = await updateNodeData(editingNode.id, data)
+      if (success) {
+        setIsModalOpen(false)
+        setEditingNode(null)
+      }
     } else {
-      await createNode(data)
+      const success = await createNode(data)
+      if (success) {
+        setIsModalOpen(false)
+        setEditingNode(null)
+        // Refresh the list to show the new node
+        fetchNodes()
+      }
     }
-    setIsModalOpen(false)
-    setEditingNode(null)
   }
 
   const handleCloseModal = () => {
@@ -51,7 +59,7 @@ export const NodeList: React.FC = () => {
     setEditingNode(null)
   }
 
-  if (loading && nodes.length === 0) {
+  if (loading && (!nodes || nodes.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="spinner" />
@@ -87,7 +95,10 @@ export const NodeList: React.FC = () => {
             className="select"
           >
             <option value="all">All Status</option>
-            <option value="online">Online</option>
+            <option value="running">Running</option>
+            <option value="stopped">Stopped</option>
+            <option value="installing">Installing</option>
+            <option value="error">Error</option>
             <option value="offline">Offline</option>
             <option value="maintenance">Maintenance</option>
           </select>
@@ -146,13 +157,48 @@ interface NodeCardProps {
 }
 
 const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting }) => {
-  const statusConfig = {
-    online: {
+  const statusConfig: Record<string, { bg: string; border: string; text: string; status: string; shadow: string }> = {
+    running: {
       bg: 'bg-dark-600',
       border: 'border-neon-green/30',
       text: 'text-neon-green',
       status: 'status-online',
       shadow: 'hover:shadow-neon-green'
+    },
+    stopped: {
+      bg: 'bg-dark-600',
+      border: 'border-gray-500/30',
+      text: 'text-gray-400',
+      status: 'status-stopped',
+      shadow: ''
+    },
+    installing: {
+      bg: 'bg-dark-600',
+      border: 'border-neon-cyan/30',
+      text: 'text-neon-cyan',
+      status: 'status-installing',
+      shadow: 'hover:shadow-neon-cyan'
+    },
+    starting: {
+      bg: 'bg-dark-600',
+      border: 'border-neon-yellow/30',
+      text: 'text-neon-yellow',
+      status: 'status-starting',
+      shadow: 'hover:shadow-neon-yellow'
+    },
+    stopping: {
+      bg: 'bg-dark-600',
+      border: 'border-neon-yellow/30',
+      text: 'text-neon-yellow',
+      status: 'status-stopping',
+      shadow: 'hover:shadow-neon-yellow'
+    },
+    error: {
+      bg: 'bg-dark-600',
+      border: 'border-neon-red/30',
+      text: 'text-neon-red',
+      status: 'status-offline',
+      shadow: 'hover:shadow-neon-red'
     },
     offline: {
       bg: 'bg-dark-600',
@@ -168,16 +214,16 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting 
       status: 'status-maintenance',
       shadow: 'hover:shadow-neon-yellow'
     },
-    unknown: {
+    updating: {
       bg: 'bg-dark-600',
-      border: 'border-gray-500/30',
-      text: 'text-gray-400',
-      status: 'status-stopped',
-      shadow: ''
+      border: 'border-neon-cyan/30',
+      text: 'text-neon-cyan',
+      status: 'status-installing',
+      shadow: 'hover:shadow-neon-cyan'
     }
   }
 
-  const config = statusConfig[node.status] || statusConfig.unknown
+  const config = statusConfig[node.status] || statusConfig.stopped
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -223,7 +269,19 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onDelete, isDeleting 
             {node.game_type}
           </span>
         </div>
-        
+
+        {node.version && (
+          <div className="flex justify-between items-center py-2 border-b border-dark-400">
+            <span className="text-gray-400 text-sm flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              Version
+            </span>
+            <span className="text-white text-sm">{node.version}</span>
+          </div>
+        )}
+
         {node.agent_version && (
           <div className="flex justify-between items-center py-2 border-b border-dark-400">
             <span className="text-gray-400 text-sm flex items-center gap-2">

@@ -14,8 +14,8 @@ interface NodesState {
   fetchNodes: () => Promise<void>
   fetchNodeMetrics: (nodeId: string) => Promise<void>
   selectNode: (nodeId: string | null) => void
-  createNode: (data: CreateNodeRequest) => Promise<Node | null>
-  updateNodeData: (id: string, data: Partial<Node>) => Promise<Node | null>
+  createNode: (data: CreateNodeRequest) => Promise<boolean>
+  updateNodeData: (id: string, data: Partial<Node>) => Promise<boolean>
   deleteNode: (nodeId: string) => Promise<boolean>
   clearError: () => void
 }
@@ -61,18 +61,17 @@ export const useNodesStore = create<NodesState>()(
         createNode: async (data: CreateNodeRequest) => {
           set({ loading: true, error: null })
           try {
-            const node = await nodesApi.create(data)
-            set((state) => ({
-              nodes: [...state.nodes, node],
-              loading: false
-            }))
-            return node
+            await nodesApi.create(data)
+            // The response contains the node info, but the node will register itself via gRPC
+            // So we just return success and let the user refresh to see the node
+            set({ loading: false })
+            return true
           } catch (error) {
             set({ 
               loading: false, 
               error: error instanceof Error ? error.message : 'Failed to create node' 
             })
-            return null
+            return false
           }
         },
 
@@ -84,13 +83,13 @@ export const useNodesStore = create<NodesState>()(
               nodes: state.nodes.map((n) => (n.id === id ? node : n)),
               loading: false
             }))
-            return node
+            return true
           } catch (error) {
             set({ 
               loading: false, 
               error: error instanceof Error ? error.message : 'Failed to update node' 
             })
-            return null
+            return false
           }
         },
 

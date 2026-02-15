@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import type { Node, CreateNodeRequest } from '../../types/api'
-import { gameTypesApi, GameType } from '../../services/api'
+import type { Node, CreateNodeRequest, GameType } from '../../types/api'
+import { gameTypesApi } from '../../services/api'
 
 interface NodeModalProps {
   isOpen: boolean

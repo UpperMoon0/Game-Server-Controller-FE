@@ -1,16 +1,13 @@
 import React, { useEffect } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useNodesStore } from '../../store/nodes/nodesSlice'
-import { useServersStore } from '../../store/servers/serversSlice'
 
 export const Layout: React.FC = () => {
   const { fetchNodes } = useNodesStore()
-  const { fetchServers } = useServersStore()
 
   useEffect(() => {
     fetchNodes()
-    fetchServers()
-  }, [fetchNodes, fetchServers])
+  }, [fetchNodes])
 
   return (
     <div className="flex h-screen bg-dark-900">
@@ -69,26 +66,6 @@ export const Layout: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                 </svg>
                 <span className="font-medium">Nodes</span>
-              </>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/servers"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                isActive
-                  ? 'bg-dark-600 text-neon-green border border-neon-green/30 shadow-neon-green'
-                  : 'text-gray-400 hover:bg-dark-600 hover:text-white'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <svg className={`w-5 h-5 ${isActive ? 'text-neon-green' : 'group-hover:text-neon-green'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span className="font-medium">Servers</span>
               </>
             )}
           </NavLink>
