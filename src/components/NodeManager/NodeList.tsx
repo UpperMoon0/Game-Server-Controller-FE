@@ -236,20 +236,33 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onView, onDelete, onInitializ
       text: 'text-neon-cyan',
       status: 'status-installing',
       shadow: 'hover:shadow-neon-cyan'
+    },
+    unknown: {
+      bg: 'bg-dark-600',
+      border: 'border-gray-600/30',
+      text: 'text-gray-400',
+      status: 'bg-gray-600 text-gray-300',
+      shadow: ''
     }
   }
 
-  const config = statusConfig[node.status] || statusConfig.stopped
+  const config = statusConfig[node.status] || statusConfig.unknown
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A'
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'N/A'
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch {
+      return 'N/A'
+    }
   }
 
   return (
@@ -265,12 +278,12 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onView, onDelete, onInitializ
           </div>
           <div>
             <h3 className="font-semibold text-lg text-white">{node.name}</h3>
-            <p className="text-gray-500 text-sm">Port: {node.port}</p>
+            <p className="text-gray-500 text-sm">Port: {node.port || 'N/A'}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.status}`}>
-            {node.status}
+            {node.status || 'N/A'}
           </span>
           {node.initialized ? (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neon-green/20 text-neon-green">
@@ -294,7 +307,7 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onView, onDelete, onInitializ
             Game Type
           </span>
           <span className="px-2 py-0.5 bg-dark-500 text-neon-cyan text-xs rounded">
-            {node.game_type}
+            {node.game_type || 'N/A'}
           </span>
         </div>
 

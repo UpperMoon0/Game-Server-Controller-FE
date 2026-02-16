@@ -382,22 +382,11 @@ export const NodeDetail: React.FC = () => {
         </div>
         <div className="flex gap-2 items-center">
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            node.status === 'running' ? 'status-online' : 'status-offline'
+            node.status === 'running' ? 'status-online' : 
+            node.status ? 'status-offline' : 'bg-gray-600 text-gray-300'
           }`}>
-            {node.status}
+            {node.status || 'N/A'}
           </span>
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-dark-500 text-neon-cyan">
-            {node.game_type}
-          </span>
-          {node.initialized ? (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neon-green/20 text-neon-green">
-              Initialized
-            </span>
-          ) : (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neon-yellow/20 text-neon-yellow">
-              Not Initialized
-            </span>
-          )}
           <div className="h-6 w-px bg-dark-400 mx-2" />
           <button 
             onClick={handleRestartNode}
