@@ -31,9 +31,11 @@ interface FileDialogsProps {
   savingNode: boolean
   editName: string
   editGameType: string
+  editVersion: string
   editPort: number
   setEditName: (name: string) => void
   setEditGameType: (gameType: string) => void
+  setEditVersion: (version: string) => void
   setEditPort: (port: number) => void
   onSaveNode: () => void
   onCloseEditNodeDialog: () => void
@@ -69,9 +71,11 @@ export const FileDialogs: React.FC<FileDialogsProps> = ({
   savingNode,
   editName,
   editGameType,
+  editVersion,
   editPort,
   setEditName,
   setEditGameType,
+  setEditVersion,
   setEditPort,
   onSaveNode,
   onCloseEditNodeDialog,
@@ -231,6 +235,16 @@ export const FileDialogs: React.FC<FileDialogsProps> = ({
                   value={editGameType}
                   onChange={(e) => setEditGameType(e.target.value)}
                   placeholder="Game type"
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Version</label>
+                <input 
+                  type="text"
+                  value={editVersion}
+                  onChange={(e) => setEditVersion(e.target.value)}
+                  placeholder="Game server version (e.g., 1.20.4)"
                   className="input w-full"
                 />
               </div>

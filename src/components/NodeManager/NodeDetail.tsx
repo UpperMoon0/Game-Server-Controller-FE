@@ -38,6 +38,7 @@ export const NodeDetail: React.FC = () => {
   // Edit form state
   const [editName, setEditName] = useState('')
   const [editGameType, setEditGameType] = useState('')
+  const [editVersion, setEditVersion] = useState('')
   const [editPort, setEditPort] = useState(0)
 
   // Load node info
@@ -329,6 +330,7 @@ export const NodeDetail: React.FC = () => {
       const success = await updateNodeData(id, {
         name: editName,
         game_type: editGameType,
+        version: editVersion,
         port: editPort,
       })
       if (success) {
@@ -428,6 +430,7 @@ export const NodeDetail: React.FC = () => {
         onEdit={() => {
           setEditName(node.name)
           setEditGameType(node.game_type)
+          setEditVersion(node.version || '')
           setEditPort(node.port)
           setShowEditNodeDialog(true)
         }}
@@ -501,9 +504,11 @@ export const NodeDetail: React.FC = () => {
         savingNode={savingNode}
         editName={editName}
         editGameType={editGameType}
+        editVersion={editVersion}
         editPort={editPort}
         setEditName={setEditName}
         setEditGameType={setEditGameType}
+        setEditVersion={setEditVersion}
         setEditPort={setEditPort}
         onSaveNode={handleSaveNode}
         onCloseEditNodeDialog={() => setShowEditNodeDialog(false)}
