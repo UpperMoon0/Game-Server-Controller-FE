@@ -7,10 +7,9 @@ import { NodeModal } from './NodeModal'
 
 export const NodeList: React.FC = () => {
   const navigate = useNavigate()
-  const { nodes, loading, error, fetchNodes, createNode, updateNodeData, deleteNode, initializeNode } = useNodesStore()
+  const { nodes, loading, error, fetchNodes, createNode, deleteNode, initializeNode } = useNodesStore()
   const [filter, setFilter] = useState<string>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingNode, setEditingNode] = useState<Node | null>(null)
   const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null)
   const [initializingNodeId, setInitializingNodeId] = useState<string | null>(null)
 
@@ -23,12 +22,6 @@ export const NodeList: React.FC = () => {
     : (nodes || []).filter(n => n.status === filter)
 
   const handleAddNode = () => {
-    setEditingNode(null)
-    setIsModalOpen(true)
-  }
-
-  const handleEditNode = (node: Node) => {
-    setEditingNode(node)
     setIsModalOpen(true)
   }
 
@@ -62,34 +55,20 @@ export const NodeList: React.FC = () => {
   }
 
   const handleModalSubmit = async (data: CreateNodeRequest) => {
-    if (editingNode) {
-      const success = await updateNodeData(editingNode.id, data)
-      if (success) {
-        setIsModalOpen(false)
-        setEditingNode(null)
-        toast.success('Node updated successfully')
-      } else {
-        const error = useNodesStore.getState().error
-        toast.error(error || 'Failed to update node')
-      }
+    const success = await createNode(data)
+    if (success) {
+      setIsModalOpen(false)
+      // Refresh the list to show the new node
+      fetchNodes()
+      toast.success('Node created successfully! Waiting for node agent to register.')
     } else {
-      const success = await createNode(data)
-      if (success) {
-        setIsModalOpen(false)
-        setEditingNode(null)
-        // Refresh the list to show the new node
-        fetchNodes()
-        toast.success('Node created successfully! Waiting for node agent to register.')
-      } else {
-        const error = useNodesStore.getState().error
-        toast.error(error || 'Failed to create node')
-      }
+      const error = useNodesStore.getState().error
+      toast.error(error || 'Failed to create node')
     }
   }
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
-    setEditingNode(null)
   }
 
   if (loading && (!nodes || nodes.length === 0)) {
@@ -153,7 +132,6 @@ export const NodeList: React.FC = () => {
           <NodeCard 
             key={node.id} 
             node={node} 
-            onEdit={() => handleEditNode(node)}
             onView={() => handleViewNode(node)}
             onDelete={() => handleDeleteNode(node.id)}
             onInitialize={() => handleInitializeNode(node)}
@@ -178,7 +156,7 @@ export const NodeList: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleModalSubmit}
-        editingNode={editingNode}
+        editingNode={null}
         loading={loading}
       />
     </div>
@@ -187,7 +165,6 @@ export const NodeList: React.FC = () => {
 
 interface NodeCardProps {
   node: Node
-  onEdit: () => void
   onView: () => void
   onDelete: () => void
   onInitialize: () => void
@@ -195,7 +172,7 @@ interface NodeCardProps {
   isInitializing: boolean
 }
 
-const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onView, onDelete, onInitialize, isDeleting, isInitializing }) => {
+const NodeCard: React.FC<NodeCardProps> = ({ node, onView, onDelete, onInitialize, isDeleting, isInitializing }) => {
   const statusConfig: Record<string, { bg: string; border: string; text: string; status: string; shadow: string }> = {
     running: {
       bg: 'bg-dark-600',
@@ -291,9 +268,20 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onView, onDelete, onI
             <p className="text-gray-500 text-sm">Port: {node.port}</p>
           </div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.status}`}>
-          {node.status}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.status}`}>
+            {node.status}
+          </span>
+          {node.initialized ? (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neon-green/20 text-neon-green">
+              Initialized
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neon-yellow/20 text-neon-yellow">
+              Not Initialized
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
@@ -351,13 +339,7 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onEdit, onView, onDelete, onI
           onClick={onView}
           className="btn btn-primary flex-1 text-sm py-2"
         >
-          View
-        </button>
-        <button 
-          onClick={onEdit}
-          className="btn btn-secondary flex-1 text-sm py-2"
-        >
-          Edit
+          View Detail
         </button>
         {!node.initialized ? (
           <button 
