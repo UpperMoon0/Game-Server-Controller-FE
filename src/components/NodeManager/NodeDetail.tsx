@@ -380,41 +380,13 @@ export const NodeDetail: React.FC = () => {
             <p className="text-gray-400 mt-1">File Explorer</p>
           </div>
         </div>
-        <div className="flex gap-2 items-center">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            node.status === 'running' ? 'status-online' : 
-            node.status ? 'status-offline' : 'bg-gray-600 text-gray-300'
-          }`}>
-            {node.status || 'N/A'}
-          </span>
-          <div className="h-6 w-px bg-dark-400 mx-2" />
-          <button 
-            onClick={handleRestartNode}
-            className="btn btn-secondary flex items-center gap-2"
-            title="Restart node container"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Restart
-          </button>
-          <button 
-            onClick={() => setShowUpdateImageDialog(true)}
-            className="btn btn-primary flex items-center gap-2"
-            title="Update node container image"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Update Image
-          </button>
-        </div>
       </div>
 
       {/* Node Info Card */}
       <NodeInfoCard 
         node={node}
         initializing={initializing}
+        updatingImage={updatingImage}
         onInitialize={handleInitializeNode}
         onEdit={() => {
           setEditName(node.name)
@@ -423,6 +395,8 @@ export const NodeDetail: React.FC = () => {
           setEditPort(node.port)
           setShowEditNodeDialog(true)
         }}
+        onRestart={handleRestartNode}
+        onUpdateImage={() => setShowUpdateImageDialog(true)}
       />
 
       {/* File Explorer */}
